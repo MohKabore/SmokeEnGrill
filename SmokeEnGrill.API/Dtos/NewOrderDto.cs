@@ -26,8 +26,9 @@ namespace SmokeEnGrill.API.Dtos
             InsertUserId = 1;
             UpdateDate = DateTime.Now;
             UpdateUserId = 1;
-            Menus = new List<MenuWithQtyDto>();
+            Lines = new List<NewOrderLineDto>();
         }
+        public int FromStoreId { get; set; }
 
         public int OrderTypeId { get; set; }
         public int? ClientId { get; set; }
@@ -60,6 +61,6 @@ namespace SmokeEnGrill.API.Dtos
         public DateTime UpdateDate { get; set; } = DateTime.Now;
         public int UpdateUserId { get; set; }
         public byte Status { get; set; }
-        public List<MenuWithQtyDto> Menus { get; set; }
+        public List<NewOrderLineDto> Lines { get; set; }
     }
 }

@@ -14,6 +14,8 @@ namespace SmokeEnGrill.API.Models
         public DateTime OrderDate { get; set; }
         public int DeliveryMethodId { get; set; }
         public int PaymentTypeId { get; set; }
+        public int FromStoreId { get; set; }
+        public Store Store { get; set; }
         public decimal SubTotal { get; set; }
         public PaymentType PaymentType { get; set; }
         public DeliveryMethod DeliveryMethod { get; set; }

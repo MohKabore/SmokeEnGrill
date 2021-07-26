@@ -66,6 +66,8 @@ namespace SmokeEnGrill.API.Helpers
             CreateMap<NewProductDto, Product>();
             CreateMap<NewStoreDto, Store>();
             CreateMap<NewStockMvtDto, StockMvt>();
+            CreateMap<NewOrderDto, Order>();
+            CreateMap<NewOrderLineDto, OrderLine>();
             // CreateMap<TrainingCreationDto, Training>();
             // CreateMap<TrainingForUpdateDto, Training>();
             // CreateMap<TrainingClassCreationDto, TrainingClass>();

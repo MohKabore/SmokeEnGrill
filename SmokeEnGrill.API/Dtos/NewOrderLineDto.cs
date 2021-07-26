@@ -1,17 +1,31 @@
 using System;
 
-namespace SmokeEnGrill.API.Models
+namespace SmokeEnGrill.API.Dtos
 {
-    public class OrderLine
+    public class NewOrderLineDto
     {
-        public int Id { get; set; }
+        public NewOrderLineDto()
+        {
+            Qty = 1;
+            Discount = 0;
+            TVA = 0;
+            Validated = false;
+            Paid = false;
+            Expired = false;
+            OverDue = false;
+            Cancelled = false;
+            Active = false;
+            Completed = false;
+            InsertDate = DateTime.Now;
+            InsertUserId = 1;
+            UpdateDate = DateTime.Now;
+            UpdateUserId = 1;
+        }
+
         public int OrderId { get; set; }
-        public Order Order { get; set; }
         public string OrderLineLabel { get; set; }
         public int? MenuId { get; set; }
-        public Menu Menu { get; set; }
         public int? ProductId { get; set; }
-        public Product Product { get; set; }
         public decimal ProductFee { get; set; }
         public decimal Qty { get; set; }
         public decimal UnitPrice { get; set; }
@@ -32,9 +46,7 @@ namespace SmokeEnGrill.API.Models
         public Boolean Active { get; set; }
         public DateTime InsertDate { get; set; }
         public int InsertUserId { get; set; }
-        public User InsertUser { get; set; }
         public DateTime UpdateDate { get; set; }
         public int UpdateUserId { get; set; }
-        public User UpdateUser { get; set; }
     }
 }
