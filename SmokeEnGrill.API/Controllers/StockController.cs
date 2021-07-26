@@ -4,8 +4,10 @@ namespace SmokeEnGrill.API.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    public class StockController
+    public class StockController: ControllerBase
     {
-
+        public StockController()
+        {
+        }
     }
 }

@@ -2,10 +2,12 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace SmokeEnGrill.API.Controllers
 {
-     [Route("api/[controller]")]
+    [Route("api/[controller]")]
     [ApiController]
-    public class OrdersController
+    public class OrdersController:ControllerBase
     {
-        
+        public OrdersController()
+        {
+        }
     }
 }

@@ -7,8 +7,10 @@ namespace SmokeEnGrill.API.Controllers
     [ServiceFilter(typeof(LogUserActivity))]
     [Route("api/[controller]")]
     [ApiController]
-    public class UsersControlller
+    public class UsersControlller: ControllerBase
     {
-
+        public UsersControlller()
+        {
+        }
     }
 }
