@@ -31,12 +31,6 @@ namespace SmokeEnGrill.API.Models
     public decimal TVA { get; set; }
     public decimal TVAAmount { get; set; }
     public decimal AmountTTC { get; set; }
-    public int? ChildId { get; set; }
-    public User Child { get; set; }
-    public int? FatherId { get; set; }
-    public User Father { get; set; }
-    public int? MotherId { get; set; }
-    public User Mother { get; set; }
     public Boolean Validated { get; set; }
     public Boolean Expired { get; set; }
     public Boolean Cancelled { get; set; }
@@ -53,7 +47,6 @@ namespace SmokeEnGrill.API.Models
     public User UpdateUser { get; set; }
     public List<OrderLine> Lines { get; set; }
     public byte Status { get; set; }
-
 
     }
 }

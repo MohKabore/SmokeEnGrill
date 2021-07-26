@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Security.Claims;
 using System.Threading.Tasks;
 using AutoMapper;
 using Microsoft.AspNetCore.Identity;
@@ -56,145 +57,117 @@ namespace SmokeEnGrill.API.Data
             return await _context.SaveChangesAsync() > 0;
         }
 
-        // public async Task<IEnumerable<Tablet>> MaintainairTablets(int maintenairId)
-        // {
-        //     var tablets = await _context.Tablets.Include(s => s.Store).Where(s => s.Store.EmployeeId == maintenairId)
-        //                                              .OrderBy(a => a.Imei).ToListAsync();
-        //     return tablets;
-        // }
+        public async Task<List<ProductWithQtyDto>> StoreProduct(int storeId)
+        {
+            var storeProducts = await _context.StoreProducts.Include(a => a.Product).Where(a => a.StoreId == storeId).ToListAsync();
+            if (storeProducts.Count() > 0)
+            {
+                var listToReturn = new List<ProductWithQtyDto>();
+                foreach (var prod in storeProducts)
+                {
+                    listToReturn.Add(
+                        new ProductWithQtyDto
+                        {
+                            ProductId = prod.ProductId,
+                            Qty = prod.Qty,
+                            PendingQty = prod.PendingQty
+                        }
+                    );
+                }
+                return listToReturn;
+            }
+            return null;
+        }
+
+        public async Task<bool> SaveStockMvt(NewStockMvtDto newStockMvtDto)
+        {
+            var stockmvt = _mapper.Map<StockMvt>(newStockMvtDto);
+            Add(stockmvt);
+
+            if (newStockMvtDto.FromStoreId != null)
+            {
+                var fromStoreProd = await _context.StoreProducts.Where(a => a.StoreId == Convert.ToInt32(newStockMvtDto.FromStoreId)).ToListAsync();
+                foreach (var prod in newStockMvtDto.Products)
+                {
+                    var sprods = fromStoreProd.FirstOrDefault(a => a.ProductId == prod.ProductId);
+                    if (sprods != null)
+                    {
+
+                        //enregistrement InventOp
+                        var inventOp = new InventOp
+                        {
+                            ProductId = prod.ProductId,
+                            OldQty = sprods.Qty,
+                            Qty = -prod.Qty,
+                            FromStoreId = newStockMvtDto.FromStoreId,
+                            ToStoreId = newStockMvtDto.ToStoreId,
+                            Delta = sprods.Qty - prod.Qty,
+                            OpDate = newStockMvtDto.MvtDate,
+                            FormNum = newStockMvtDto.RefNum
+                        };
+                        Add(inventOp);
+
+                        //enregistrement InventOpStockMvt
+                        var stkMvtInventOp = new StockMvtInventOp
+                        {
+                            InventOpId = inventOp.Id,
+                            StockMvtId = stockmvt.Id
+                        };
+                        Add(stkMvtInventOp);
 
 
-        // public async Task StockAllocation(int insertUserId,int tabletTypeId, StockAllocationDto stockAllocationDto)
-        // {
-        //     int ToStoreId = Convert.ToInt32(stockAllocationDto.ToStoreId);
-        //     int ceiStoreid = _config.GetValue<int>("AppSettings:CEIStoreId");
-        //     if (ToStoreId == ceiStoreid)
-        //     {
-        //         var toStore = await _context.Stores.FirstOrDefaultAsync
-        //                                     (a => a.RegionId == stockAllocationDto.RegionId && a.DepartmentId == stockAllocationDto.DepartmentId);
-        //         if (toStore == null)
-        //         {
-        //             // creation d'un nouveau store
-        //             var newStore = new Store
-        //             {
-        //                 StorePId = ceiStoreid,
-        //                 StoreTypeId = _config.GetValue<int>("AppSettings:clientStoretypeId"),
-        //                 Name = "MAG CEI - " + (await _context.Departments.FirstOrDefaultAsync(a => a.Id == Convert.ToInt32(stockAllocationDto.DepartmentId))).Name,
-        //                 RegionId = stockAllocationDto.RegionId,
-        //                 DepartmentId = stockAllocationDto.DepartmentId
-        //             };
-        //             Add(newStore);
-        //             ToStoreId = newStore.Id;
-        //         }
-        //         else
-        //         {
-        //             ToStoreId = toStore.Id;
-        //         }
-        //     }
-        //     int inventOpTypeId = (int)InventOpType.TypeEnum.StockEntry;
-        //     var stckMvt = new StockMvt
-        //     {
-        //         InsertUserId = insertUserId,
-        //         ToStoreId = ToStoreId,
-        //         FromStoreId = stockAllocationDto.FromStoreId,
-        //         MvtDate = stockAllocationDto.Mvtdate,
-        //         RefNum = stockAllocationDto.RefNum,
-        //         InventOpTypeId = inventOpTypeId
-        //     };
-        //     Add(stckMvt);
 
-        //     foreach (var imei in stockAllocationDto.Imeis)
-        //     {
-        //         var tablet = new Tablet
-        //         {
-        //             Imei = imei,
-        //             StoreId = ToStoreId,
-        //             Type = false,
-        //             Status = 1,
-        //             Active = false,
-        //             TabletTypeId = tabletTypeId,
-        //             RepairCounter=0
-        //         };
-        //         Add(tablet);
+                        //mise a jour du stock
+                        sprods.Qty = sprods.Qty - prod.Qty;
+                        Update(sprods);
+                    }
+                }
 
-        //         var inventOp = new InventOp
-        //         {
-        //             InsertUserId = insertUserId,
-        //             FormNum = stockAllocationDto.RefNum,
-        //             OpDate = stockAllocationDto.Mvtdate,
-        //             FromStoreId = stockAllocationDto.FromStoreId,
-        //             ToStoreId = ToStoreId,
-        //             TabletId = tablet.Id,
-        //             InventOpTypeId = inventOpTypeId
-        //         };
-        //         Add(inventOp);
+            }
 
-        //         var stkMvtinventOp = new StockMvtInventOp
-        //         {
-        //             StockMvtId = stckMvt.Id,
-        //             InventOpId = inventOp.Id
-        //         };
-        //         Add(stkMvtinventOp);
-        //     }
-        // }
+            var tostoreProd = await _context.StoreProducts.Where(a => a.StoreId == Convert.ToInt32(newStockMvtDto.ToStoreId)).ToListAsync();
+            foreach (var prod in newStockMvtDto.Products)
+            {
+                var sprods = tostoreProd.FirstOrDefault(a => a.ProductId == prod.ProductId);
+                decimal old = 0;
+                if (sprods != null)
+                    old = sprods.Qty;
 
-        // public async Task<IEnumerable<Tablet>> StoreTablets(int storeId)
-        // {
-        //     var tablets = await _context.Tablets.Where(s => s.StoreId == storeId)
-        //                                          .OrderBy(a => a.Imei).ToListAsync();
-        //     return tablets;
-        // }
+                //enregistrement InventOp
+                var inventOp = new InventOp
+                {
+                    ProductId = prod.ProductId,
+                    OldQty = old,
+                    Qty = prod.Qty,
+                    FromStoreId = newStockMvtDto.FromStoreId,
+                    ToStoreId = newStockMvtDto.ToStoreId,
+                    Delta = old + prod.Qty,
+                    OpDate = newStockMvtDto.MvtDate,
+                    FormNum = newStockMvtDto.RefNum
+                };
+                Add(inventOp);
 
-        // public void TabletAllocation(int insertUserId, StockAllocationDto stockAllocationDto)
-        // {
-        //      int inventOpTypeId = (int)InventOpType.TypeEnum.StockTransfer;
-        //     var stckMvt = new StockMvt
-        //     {
-        //         ToStoreId = stockAllocationDto.ToStoreId,
-        //         FromStoreId = stockAllocationDto.FromStoreId,
-        //         MvtDate = stockAllocationDto.Mvtdate,
-        //         InsertUserId = insertUserId,
-        //         RefNum = stockAllocationDto.RefNum,
-        //         InventOpTypeId = inventOpTypeId
-        //     };
-        //     Add(stckMvt);
+                //enregistrement InventOpStockMvt
+                var stkMvtInventOp = new StockMvtInventOp
+                {
+                    InventOpId = inventOp.Id,
+                    StockMvtId = stockmvt.Id
+                };
+                Add(stkMvtInventOp);
+                //mise a jour du stock
+                sprods.Qty = sprods.Qty + prod.Qty;
+                Update(sprods);
 
-        //     foreach (var tablet in stockAllocationDto.Tablets)
-        //     {
-        //         tablet.StoreId = stockAllocationDto.ToStoreId;
-        //         Update(tablet);
+            }
 
-        //         var inventOp = new InventOp
-        //         {
-        //             InsertUserId = insertUserId,
-        //             FormNum = stockAllocationDto.RefNum,
-        //             OpDate = stockAllocationDto.Mvtdate,
-        //             FromStoreId = stockAllocationDto.FromStoreId,
-        //             ToStoreId = stockAllocationDto.ToStoreId,
-        //             TabletId = tablet.Id,
-        //             InventOpTypeId = inventOpTypeId
-        //         };
-        //         _context.Add(inventOp);
+            if (await SaveAll())
+                return true;
 
-        //         var stkMvtinventOp = new StockMvtInventOp
-        //         {
-        //             StockMvtId = stckMvt.Id,
-        //             InventOpId = inventOp.Id
-        //         };
-        //         _context.Add(stkMvtinventOp);
-        //     }
-        // }
+            else
+                return false;
 
-        // public async Task<List<Tablet>> GetTabletByImei(string imei)
-        // {
-        //     var tablets = await _context.Tablets.Include(a=>a.TabletType)
-        //                                         .Include(a=>a.Store).
-        //                                         ThenInclude(a=>a.Employee)
-        //                                         .ThenInclude(a=>a.Region)
-        //                                         .Where(a=>a.Imei == imei)
-        //                                         .ToListAsync();
-        //     return tablets;
 
-        // }
+
+        }
     }
 }

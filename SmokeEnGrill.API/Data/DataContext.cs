@@ -27,6 +27,7 @@ namespace SmokeEnGrill.API.Data
         public DbSet<District> Districts { get; set; }
         public DbSet<City> Cities { get; set; }
         public DbSet<Country> countries { get; set; }
+        public DbSet<Order> Orders { get; set; }
         public DbSet<OrderType> OrderTypes { get; set; }
         public DbSet<PaymentType> PaymentTypes { get; set; }
         public DbSet<Menu> Menus { get; set; }

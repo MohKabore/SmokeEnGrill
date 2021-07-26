@@ -63,7 +63,9 @@ namespace SmokeEnGrill.API.Helpers
             //              });
             // CreateMap<PhotoForCreationDto, Photo>();
             CreateMap<UserForRegisterDto, User>();
+            CreateMap<NewProductDto, Product>();
             CreateMap<NewStoreDto, Store>();
+            CreateMap<NewStockMvtDto, StockMvt>();
             // CreateMap<TrainingCreationDto, Training>();
             // CreateMap<TrainingForUpdateDto, Training>();
             // CreateMap<TrainingClassCreationDto, TrainingClass>();
