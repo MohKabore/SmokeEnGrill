@@ -10,6 +10,5 @@ namespace SmokeEnGrill.API.Models
         public City City { get; set; }
         public int DistrictId { get; set; }
         public District District { get; set; }
-        public string Note { get; set; }
     }
 }

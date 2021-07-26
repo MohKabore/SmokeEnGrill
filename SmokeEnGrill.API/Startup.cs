@@ -123,10 +123,12 @@ namespace SmokeEnGrill.API
             services.AddCors();
             services.Configure<CloudinarySettings>(Configuration.GetSection("CloudinarySettings"));
             //Mapper.Reset();
-            services.AddAutoMapper(typeof(ISmokeEnGrillRepository).Assembly);
+            services.AddAutoMapper(typeof(IOrderRepository).Assembly);
             services.AddTransient<Seed>();
             // services.AddScoped<IDatingRepository, DatingRepository>();
-            services.AddScoped<ISmokeEnGrillRepository, SmokeEnGrillRepository>();
+            services.AddScoped<IOrderRepository, OrderRepository>();
+            services.AddScoped<IAuthRepository, AuthRepository>();
+            services.AddScoped<IUserRepository, UserRepository>();
             services.AddScoped<IStockRepository, StockRepository>();
             services.AddScoped<LogUserActivity>();
         }
