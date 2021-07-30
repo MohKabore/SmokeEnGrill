@@ -3,11 +3,11 @@ using System.Collections.Generic;
 
 namespace SmokeEnGrill.API.Dtos
 {
-    public class NewStockMvtDto
+    public class StockMvtDto
     {
-        public NewStockMvtDto()
+        public StockMvtDto()
         {
-            Status =1;
+            Status = 1;
         }
 
         public int InventOpTypeId { get; set; }
@@ -20,6 +20,6 @@ namespace SmokeEnGrill.API.Dtos
         public int? ToEmployeeId { get; set; }
         public byte Status { get; set; }
         public int? InsertUserId { get; set; }
-        public List<ProductWithQtyDto> Products { get; set; }
+        public List<FoodMenuProductDto> Products { get; set; }
     }
 }

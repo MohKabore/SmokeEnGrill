@@ -5,6 +5,7 @@ using SmokeEnGrill.API.Models;
 using Microsoft.AspNetCore.Identity;
 using Newtonsoft.Json;
 using Microsoft.EntityFrameworkCore;
+using EducNotes.API.Models;
 
 namespace SmokeEnGrill.API.Data
 {

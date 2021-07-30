@@ -1,1 +1,129 @@
 /* You can add global styles to this file, and also import other style files */
+/* You can add global styles to this file, and also import other style files */
+@import "../node_modules/bootstrap/dist/css/bootstrap.min.css";
+// @import '../node_modules/font-awesome/css/font-awesome.min.css';
+@import "../node_modules/ngx-bootstrap/datepicker/bs-datepicker.css";
+@import "../node_modules/@fortawesome/fontawesome-pro/css/all.min.css";
+// @import "../node_modules/ng-zorro-antd/ng-zorro-antd.css";
+
+@import "~ng-uikit-pro-standard/assets/scss/core/colors";
+@import "~ng-uikit-pro-standard/assets/scss/core/variables";
+@import "~ng-uikit-pro-standard/assets/scss/core/variables-pro";
+
+@import "~ng-uikit-pro-standard/assets/scss/addons-pro/_timelines-pro.scss";
+@import "~ng-uikit-pro-standard/assets/scss/addons-pro/_timeline-pro.scss";
+
+.btnOrange {
+  color: #192C47 !important;
+  font-weight: bold !important;
+  background-color: #f89f20 !important;
+ }
+
+ .blueWhite {
+  color: #ffffff !important;
+  font-weight: bold !important;
+  background-color: #192C47 !important;
+}
+
+.btnBlue {
+  color: #f89f20 !important;
+  font-weight: bold !important;
+  background-color: #192C47 !important;
+}
+
+.btnBlueW {
+  color: #ffffff !important;
+  font-weight: bold !important;
+  background-color: #192C47 !important;
+}
+
+.btnWhiteO {
+  color: #f89f20 !important;
+  font-weight: bold !important;
+  background-color: #ffffff !important;
+}
+
+.btnWhiteB {
+  color: #192C47 !important;
+  font-weight: bold !important;
+  background-color: #ffffff !important;
+}
+
+.textBlue {
+  color: #00008B !important;
+}
+
+.textDarkRed {
+  color: #8B0000 !important;
+}
+
+.textDarkBlue {
+  color: #192C47 !important;
+}
+
+.block-title {
+  font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+  color: #192C47 !important;
+  font-size: 15px !important;
+  font-weight: 600 !important;
+}
+
+.day-title {
+  color: #ffffff !important;
+  font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+  background-color: #192C47 !important;
+}
+
+.day-title50 {
+  color: #ffffff !important;
+  font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+  width: 50% !important;
+  background-color: #192C47 !important;
+}
+
+.day-title25 {
+  color: #ffffff !important;
+  font-family: Verdana, Geneva, Tahoma, sans-serif !important;
+  width: 25% !important;
+  background-color: #192C47 !important;
+}
+
+.md-form input[type="text"]:focus {
+  box-shadow: 0 1px 0 0 #f89f20 !important;
+
+  border-bottom: 1px solid #f89f20 !important;
+}
+
+.md-form input[type="password"]:focus {
+  box-shadow: 0 1px 0 0 #f89f20 !important;
+
+  border-bottom: 1px solid #f89f20 !important;
+}
+
+.md-form textarea[type="text"]:focus:not([readonly]) + label {
+  color: #f89f20 !important;
+}
+.md-form textarea[type="text"]:focus:not([readonly]) {
+  box-shadow: 0 1px 0 0 #f89f20 !important;
+  border-bottom: 1px solid #f89f20 !important;
+}
+.md-form input[type='text']:focus:not([readonly]) + label {
+    color: #f89f20 !important;
+  }
+  .md-form input[type='password']:focus:not([readonly]) + label {
+    color: #f89f20 !important;
+  }
+
+  .monimg{
+    width: 40px;
+    height:  40px;
+  }
+
+  .zoom {
+    transition: transform .2s; /* Animation */
+  }
+  
+  .zoom:hover {
+    transform: scale(2); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
+  }
+  

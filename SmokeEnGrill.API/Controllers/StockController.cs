@@ -69,9 +69,9 @@ namespace SmokeEnGrill.API.Controllers
 
 
         [HttpPost("CreateMenu")]
-        public async Task<IActionResult> CreateMenu(NewMenuDto model)
+        public async Task<IActionResult> CreateMenu(FoodMenuDto model)
         {
-            var menuToCreate = new Menu
+            var menuToCreate = new FoodMenu
             {
                 Status = 1,
                 Name = model.Name
@@ -79,16 +79,16 @@ namespace SmokeEnGrill.API.Controllers
 
             _stockRepo.Add(menuToCreate);
 
-            foreach (var prod in model.Products)
-            {
-                var newMenuProduct = new MenuProduct
-                {
-                    MenuId = menuToCreate.Id,
-                    Qty = prod.Qty,
-                    ProductId = prod.ProductId
-                };
-                _stockRepo.Add(newMenuProduct);
-            }
+            // foreach (var prod in model.Products)
+            // {
+            //     var newMenuProduct = new MenuProduct
+            //     {
+            //         MenuId = menuToCreate.Id,
+            //         Qty = prod.Qty,
+            //         ProductId = prod.ProductId
+            //     };
+            //     _stockRepo.Add(newMenuProduct);
+            // }
 
             if (await _stockRepo.SaveAll())
                 return Ok();
@@ -112,7 +112,7 @@ namespace SmokeEnGrill.API.Controllers
         }
 
         [HttpPost("StockMvt")]
-        public async Task<IActionResult> StockMvt(NewStockMvtDto model)
+        public async Task<IActionResult> StockMvt(StockMvtDto model)
         {
             model.InsertUserId = Convert.ToInt32(_userManager.GetUserId(User));
             if(await _stockRepo.SaveStockMvt(model))

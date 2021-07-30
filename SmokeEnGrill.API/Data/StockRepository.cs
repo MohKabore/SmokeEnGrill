@@ -57,16 +57,16 @@ namespace SmokeEnGrill.API.Data
             return await _context.SaveChangesAsync() > 0;
         }
 
-        public async Task<List<ProductWithQtyDto>> StoreProduct(int storeId)
+        public async Task<List<FoodMenuProductDto>> StoreProduct(int storeId)
         {
             var storeProducts = await _context.StoreProducts.Include(a => a.Product).Where(a => a.StoreId == storeId).ToListAsync();
             if (storeProducts.Count() > 0)
             {
-                var listToReturn = new List<ProductWithQtyDto>();
+                var listToReturn = new List<FoodMenuProductDto>();
                 foreach (var prod in storeProducts)
                 {
                     listToReturn.Add(
-                        new ProductWithQtyDto
+                        new FoodMenuProductDto
                         {
                             ProductId = prod.ProductId,
                             Qty = prod.Qty,
@@ -79,7 +79,7 @@ namespace SmokeEnGrill.API.Data
             return null;
         }
 
-        public async Task<bool> SaveStockMvt(NewStockMvtDto newStockMvtDto)
+        public async Task<bool> SaveStockMvt(StockMvtDto newStockMvtDto)
         {
             var stockmvt = _mapper.Map<StockMvt>(newStockMvtDto);
             Add(stockmvt);

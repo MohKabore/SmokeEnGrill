@@ -1,6 +1,9 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using EducNotes.API.Models;
+using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Configuration;
 using SmokeEnGrill.API.Models;
 
 namespace SmokeEnGrill.API.Data
@@ -8,9 +11,17 @@ namespace SmokeEnGrill.API.Data
     public class DataContext : IdentityDbContext<User, Role, int, IdentityUserClaim<int>,
     UserRole, IdentityUserLogin<int>, IdentityRoleClaim<int>, IdentityUserToken<int>>
     {
-        public DataContext(DbContextOptions<DataContext> options) : base(options) { }
-        public DbSet<Photo> Photos { get; set; }
+      private readonly IConfiguration _config;
+      private readonly IHttpContextAccessor _httpContext;
 
+      public DataContext (DbContextOptions<DataContext> options, IConfiguration config,
+        IHttpContextAccessor httpContext) : base (options) 
+      {
+        _httpContext = httpContext;
+        _config = config;
+      }
+
+        public DbSet<Photo> Photos { get; set; }
         public DbSet<InventOp> InventOps { get; set; }
         public DbSet<InventOpType> InventOpTypes { get; set; }
 
@@ -34,21 +45,27 @@ namespace SmokeEnGrill.API.Data
         public DbSet<StoreProduct> StoreProducts { get; set; }
         public DbSet<OrderLineProduct> OrderLineProducts { get; set; }
         public DbSet<OrderLine> OrderLines { get; set; }
-        public DbSet<MenuProduct> menuProducts { get; set; }
 
-
-
-
-
-
-
-
-
-
-
-
-
-
+        protected override void OnConfiguring (DbContextOptionsBuilder optionsBuilder)
+        {
+            string subdomain = "SmokeNGrill";
+            //To get subdomain
+            string[] fullAddress = _httpContext.HttpContext?.Request?.Headers?["Host"].ToString ()?.Split ('.');
+            if (fullAddress != null)
+            {
+            subdomain = fullAddress[0].ToLower();
+            if(subdomain == "localhost:5000" || subdomain == "test2")
+            {
+                subdomain = "SmokeNGrill";
+            }
+            else if (subdomain == "test1" || subdomain == "www" || subdomain == "educnotes") {
+                subdomain = "demo";
+            }
+            }
+            string tenantConnString = string.Format(_config.GetConnectionString("DefaultConnection"), $"{subdomain}");
+            optionsBuilder.UseSqlServer(tenantConnString);
+            base.OnConfiguring(optionsBuilder);
+        }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

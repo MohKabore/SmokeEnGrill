@@ -1,8 +1,7 @@
 namespace SmokeEnGrill.API.Models
 {
-    public class StockMvtInventOp
+    public class StockMvtInventOp : BaseEntity
     {
-        public int Id { get; set; }
         public int InventOpId { get; set; }
         public InventOp InventOp { get; set; }
         public int StockMvtId { get; set; }

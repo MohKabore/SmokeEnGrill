@@ -1,8 +1,7 @@
 namespace SmokeEnGrill.API.Models
 {
-    public class Country
+    public class Country : BaseEntity
     {
-           public int id { get; set; }
-    public string Name { get; set; }
+        public string Name { get; set; }
     }
 }

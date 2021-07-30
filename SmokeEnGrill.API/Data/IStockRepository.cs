@@ -12,7 +12,7 @@ namespace SmokeEnGrill.API.Data
         void Delete<T>(T entity) where T : class;
         void DeleteAll<T>(List<T> entities) where T : class;
         Task<bool> SaveAll();
-        Task<List<ProductWithQtyDto>> StoreProduct(int storeId);
-        Task<bool> SaveStockMvt(NewStockMvtDto newStockMvtDto);
+        Task<List<FoodMenuProductDto>> StoreProduct(int storeId);
+        Task<bool> SaveStockMvt(StockMvtDto newStockMvtDto);
     }
 }

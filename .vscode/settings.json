@@ -1,0 +1,7 @@
+{
+    "appService.defaultWebAppToDeploy": "/subscriptions/3911763a-18b9-4603-941b-b1c84c0fe980/resourceGroups/smokengrill-ressource-group/providers/Microsoft.Web/sites/smoke-grill/slots/test1",
+    "appService.deploySubpath": "SmokeEnGrill.API/bin/Release",
+    "editor.tabSize": 2,
+    "files.trimTrailingWhitespace": true,
+    "workbench.editor.enablePreview": false
+}

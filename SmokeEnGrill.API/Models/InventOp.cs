@@ -3,14 +3,13 @@ using System.Collections.Generic;
 
 namespace SmokeEnGrill.API.Models
 {
-    public partial class InventOp
+    public partial class InventOp : BaseEntity
     {
         public InventOp()
         {
             InsertDate = DateTime.Now;
         }
 
-        public int Id { get; set; }
         public int? InventOpTypeId { get; set; }
         public DateTime OpDate { get; set; }
         public int? OrderLineId { get; set; }
@@ -30,10 +29,5 @@ namespace SmokeEnGrill.API.Models
         public User ToEmployee { get; set; }
         public string FormNum { get; set; }
         public byte Status { get; set; }
-        public DateTime InsertDate { get; set; }
-        public InventOpType InventOpType { get; set; }
-        public int? InsertUserId { get; set; }
-        public User InsertUser { get; set; }
-        // public  ICollection<StockMvtInventOp> StockMvtInventOp { get; set; }
     }
 }

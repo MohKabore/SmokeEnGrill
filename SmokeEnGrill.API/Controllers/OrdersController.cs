@@ -35,18 +35,18 @@ namespace SmokeEnGrill.API.Controllers
                 var orderline = _mapper.Map<OrderLine>(line);
                 _orderRepo.Add(orderline);
 
-                var menuProds = await _context.menuProducts.Where(a => a.MenuId == line.MenuId).ToListAsync();
-                foreach (var menu in menuProds)
-                {
-                    var orderlineProd = new OrderLineProduct
-                    {
-                        MenuId = menu.MenuId,
-                        ProductId = menu.ProductId,
-                        Qty = menu.Qty
-                    };
+                // var menuProds = await _context.menuProducts.Where(a => a.MenuId == line.MenuId).ToListAsync();
+                // foreach (var menu in menuProds)
+                // {
+                //     var orderlineProd = new OrderLineProduct
+                //     {
+                //         MenuId = menu.MenuId,
+                //         ProductId = menu.ProductId,
+                //         Qty = menu.Qty
+                //     };
 
-                    _orderRepo.Add(orderlineProd);
-                }
+                //     _orderRepo.Add(orderlineProd);
+                // }
             }
 
             if(await _orderRepo.SaveAll())

@@ -1,11 +1,9 @@
 namespace SmokeEnGrill.API.Models
 {
-    public class Menu
+    public class Menu : BaseEntity
     {
-        public int Id { get; set; }
         public string Name { get; set; }
-        public byte Status { get; set; }
-        public int? PhotoId { get; set; }
-        public Photo Photo { get; set; }
+        public int UserTypeId { get; set; }
+        public UserType UserType { get; set; }
     }
 }

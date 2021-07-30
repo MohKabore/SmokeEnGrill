@@ -1,8 +1,7 @@
 namespace SmokeEnGrill.API.Models
 {
-    public class OrderLineProduct
+    public class OrderLineProduct : BaseEntity
     {
-        public int Id { get; set; }
         public int MenuId { get; set; }
         public Menu Menu { get; set; }
         public int ProductId { get; set; }

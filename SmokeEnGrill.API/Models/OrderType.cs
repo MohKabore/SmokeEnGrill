@@ -1,8 +1,7 @@
 namespace SmokeEnGrill.API.Models
 {
-    public class OrderType
+    public class OrderType : BaseEntity
     {
-        public int Id { get; set; }
         public string Name { get; set; }
     }
 }

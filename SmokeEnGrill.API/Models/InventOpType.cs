@@ -3,9 +3,9 @@ using System.Collections.Generic;
 
 namespace SmokeEnGrill.API.Models
 {
-    public partial class InventOpType
+    public partial class InventOpType : BaseEntity
     {
-       
+
   public enum TypeEnum
         {
             StockEntry = 1,
@@ -21,12 +21,8 @@ namespace SmokeEnGrill.API.Models
             InventOp = 11,
             EmpMvtToEC = 12,
             TabletCorrection = 13,
-            EcMvt=14
+            EcMvt = 14
         }
-        public int Id { get; set; }
         public string Name { get; set; }
-
-        // public  ICollection<InventOp> InventOp { get; set; }
-        // public  ICollection<StockMvt> StockMvt { get; set; }
     }
 }

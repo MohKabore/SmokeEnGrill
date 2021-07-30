@@ -12,7 +12,6 @@ namespace SmokeEnGrill.API.Models
         }
         public string FirstName { get; set; }
         public string LastName { get; set; }
-
         public byte Gender { get; set; }
         public string SecondPhoneNumber { get; set; }
         public string ValidationCode { get; set; }
@@ -25,13 +24,9 @@ namespace SmokeEnGrill.API.Models
         public int ResetPasswordCount { get; set; }
         public byte TempData { get; set; }
         public string Idnum { get; set; }
-
         public DateTime DateOfBirth { get; set; }
-
         public int? NbChild { get; set; }
-        // public int? BirthPlaceId { get; set; }
         public string BirthPlace { get; set; }
-
         public string Cni { get; set; }
         public string Passport { get; set; }
         public string Iddoc { get; set; }
@@ -40,7 +35,6 @@ namespace SmokeEnGrill.API.Models
         public DateTime InsertDate { get; set; }
         public DateTime UpdateDate { get; set; }
         public byte? Version { get; set; }
-
         // prelectionné mais pas encore séléctionné apres formation
         public bool PreSelected { get; set; }
         // sélectionné apres formation mais pas encore retenu definitivement(peut etre donc dans la reserve)
