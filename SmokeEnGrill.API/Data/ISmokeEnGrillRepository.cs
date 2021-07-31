@@ -2,82 +2,69 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using EducNotes.API.Dtos;
 using SmokeEnGrill.API.Dtos;
 using SmokeEnGrill.API.Helpers;
 using SmokeEnGrill.API.Models;
 
 namespace SmokeEnGrill.API.Data
 {
-    public interface ISmokeEnGrillRepository
-    {
-        void Add<T>(T entity) where T : class;
-        void Update<T>(T entity) where T : class;
-        void Delete<T>(T entity) where T : class;
-        void DeleteAll<T>(List<T> entities) where T : class;
-        Task<bool> SaveAll();
-        Task<User> GetUser(int id, bool isCurrentUser);
-        Task<bool> UserNameExist(string userName);
-        Task<bool> SendEmail(EmailFormDto emailFormDto);
+  public interface  ISmokeEnGrillRepository
+  {
+    void Add<T>(T entity) where T : class;
+    void Update<T>(T entity) where T : class;
+    void Delete<T>(T entity) where T : class;
+    void DeleteAll<T>(List<T> entities) where T : class;
+    Task<bool> SaveAll();
+    string GetAppSubDomain();
+    // Task<PagedList<User>> GetUsers(UserParams userParams);
+    Task<User> GetUser(int id, bool isCurrentUser);
+    Task<Photo> GetPhoto(int id);
+    Task<Photo> GetMainPhotoForUser(int userId);
+    Task<bool> EmailExist(string email);
+    Task<bool> UserNameExist(string userName, int currentUserId);
+    Task<bool> AddEmployee(EmployeeForEditDto user);
+    Task<bool> EditUserAccount(UserAccountForEditDto user);
+    Task<IEnumerable<UserType>> getUserTypes();
+    Task<bool> SendEmail(EmailFormDto emailFormDto);
+    // bool SendSms(List<string> phoneNumbers, string content);
 
-        Task<User> GetUserByCode(string code);
-        Task<User> GetUserByEmail(string email);
+    Task<IEnumerable<City>> GetAllCities();
+    Task<IEnumerable<District>> GetAllGetDistrictsByCityIdCities(int id);
 
-        Task<bool> SendResetPasswordLink(string email, string code);
-       // Task<List<User>> Hotliners();
-      
-        // Task<PagedList<User>> GetUsers(UserParams userParams);
-        // Task<IEnumerable<User>> GetChildren(int parentId);
-        // Task<IEnumerable<User>> GetClassStudents(int classId);
-        // Task<IEnumerable<Agenda>> GetClassAgenda(int classId, DateTime StartDate, DateTime EndDate);
-        // Task<IEnumerable<Agenda>> GetClassAgendaTodayToNDays(int classId, int toNbDays);
-        // Task<IEnumerable<Schedule>> GetClassSchedule(int classId);
-        // Task<IEnumerable<ClassLevelSchedule>> GetClassLevelSchedule(int classLevelId);
-        // Task<IEnumerable<CourseSkill>> GetCourseSkills(int courseId);
-        // Task<Agenda> GetAgenda(int agendaId);
-        // Task<Photo> GetPhoto(int id);
-        // Task<Photo> GetMainPhotoForUser(int userId);
-        // Task<Class> GetClass(int Id);
-        // List<int> GetWeekDays(DateTime date);
-        // Task<IEnumerable<Schedule>> GetScheduleDay(int classId, int day);
-        // Task<Like> GetLike(int userId, int recipientId);
-        // Task<bool> EmailExist(string email);
+    void AddUserLink(int userId, int parentId);
 
-
-        // Task<bool> AddUserPreInscription(UserForRegisterDto userForRegister, int insertUserId);
-
-        // Task<IEnumerable<User>> GetStudentsForClass(int classId);
-        // Task<IEnumerable<Agenda>> GetClassAgenda(int classId);
-        // Task<List<AgendaForListDto>> GetUserClassAgenda(int classId, DateTime startDate, DateTime endDate);
-        // Task<IEnumerable<UserType>> getUserTypes();
-
-        // //Task<List<coursClass>> GetTeacherCoursesAndClasses(int teacherId);
-        // Task<Course> GetCourse(int Id);
-        // bool SendSms(List<string> phoneNumbers, string content);
-
-        // Task<IEnumerable<City>> GetAllCities();
-        // Task<IEnumerable<District>> GetAllGetDistrictsByCityIdCities(int id);
-
-        // void AddInscription(int levelId, int userId);
-        // void AddUserLink(int userId, int parentId);
-
-        // Task<User> GetSingleUser(string userName);
-        // Task<List<UserEvalsDto>> GetUserGrades(int userId, int classId);
-        // IEnumerable<ClassAgendaToReturnDto> GetAgendaListByDueDate(IEnumerable<Agenda> agendaItems);
-        // // Task<IActionResult> GetTeacherSessions(int teacherId, int classId)
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////
-        // /////////////////////////////// DATA FROM MOHAMED KABORE ////////////////////////////////////////////
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////
-        // Task<IEnumerable<ClassType>> GetClassTypes();
-        // Task<int> AddSelfRegister(User user, string roleName, bool sendLink, int currentUserId);
-        // Task<List<string>> GetEmails();
-        // Task<List<string>> GetUserNames();
-        // Task<List<ClassLevel>> GetLevels();
-        // Task sendOk(int userTypeId, int userId);
-        // Task<List<UserSpaCodeDto>> ParentSelfInscription(int parentId, List<UserForUpdateDto> userToUpdate);
-
-        // Task<int> GetAssignedChildrenCount(int parentId);
-        // Task<bool> SaveProductSelection(int userPid, int userId,List<ServiceSelectionDto> products);
-
-    }
+    Task<User> GetUserByEmail(string email);
+    Task<EmailTemplate> GetEmailTemplate(int id);
+    Task<SmsTemplate> GetSmsTemplate(int id);
+    Task sendOk(int userTypeId, int userId);
+    Task<IEnumerable<Setting>> GetSettings();
+    Task<IEnumerable<Email>> SetEmailDataForRegistration(IEnumerable<RegistrationEmailDto> emailData, string content, string RegDeadLine);
+    Task<Order> GetOrder(int id);
+    Task<Email> SetEmailForAccountUpdated(string subject, string content, string lastName, byte gender, string parentEmail, int userId);
+    string GetUserIDNumber(int userId, string lastName, string firstName);
+    string GetInvoiceNumber(int invoiceId);
+    Task<IEnumerable<PaymentType>> GetPaymentTypes();
+    Task<IEnumerable<Bank>> GetBanks();
+    Task<List<FinOpDto>> GetOrderPayments(int orderId);
+    Task<List<OrderLine>> GetOrderLines(int orderId);
+    Task<List<Product>> GetActiveProducts();
+    Task<User> GetUserByEmailAndLogin(string username, string email);
+    Task<Boolean> SendTeacherConfirmEmail(int userId);
+    Task<List<Token>> GetTokens();
+    string ReplaceTokens(List<TokenDto> tokens, string content);
+    List<TokenDto> GetMessageTokenValues(List<Token> tokens, UserToSendMsgDto user);
+    Task<List<Token>> GetBroadcastTokens();
+    MsgRecipientsDto setRecipientsList(List<User> users, int msgChoice, Boolean sendToNotValidated);
+    Task<Boolean> UserInRole(int userId, int roleId);
+    Task<UserWithRolesDto> GetUserWithRoles(int userId);
+    Task<List<MenuItemDto>> GetUserTypeMenu(int userTypeId, int userId);
+    Task<List<MenuCapabilitiesDto>> GetMenuCapabilities(int userTypeId, int userId);
+    Task<ErrorDto> SaveRole(RoleDto user);
+    Task<List<District>> GetDistricts();
+    Task<List<City>> GetCities();
+    Task<List<Country>> GetCountries();
+    Task<List<Zone>> GetZones();
+    Task<List<PayableAt>> GetPayableAts();
+  }
 }

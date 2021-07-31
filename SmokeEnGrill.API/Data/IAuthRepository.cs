@@ -1,4 +1,5 @@
 using System.Threading.Tasks;
+using EducNotes.API.Dtos;
 using SmokeEnGrill.API.Dtos;
 using SmokeEnGrill.API.Models;
 
@@ -16,15 +17,6 @@ namespace SmokeEnGrill.API.Data
         Task<User> GetUserByEmail(string email);
         Task<bool> SendResetPasswordLink(string email, string code);
         Task<bool> UserNameExist(string userName);
-                Task<User> GetUserByCode(string code);
-
-
-
-
-
-
-
-
 
     }
 }

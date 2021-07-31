@@ -1,4 +1,4 @@
-namespace SmokeEnGrill.API.Dtos
+namespace EducNotes.API.Dtos
 {
     public class EmailFormDto
     {

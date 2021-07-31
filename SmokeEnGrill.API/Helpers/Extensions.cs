@@ -39,35 +39,8 @@ namespace SmokeEnGrill.API.Helpers
                     age--;
             }
 
-
             return age;
         }
-
-        // public static string CalculateTop(this DateTime startHourMin)
-        // {
-        //     // to be retrieved from appSettings
-        //     var scheduleHourSize = Convert.ToDouble(Startup.StaticConfig.GetSection("AppSettings:DimHourSchedule").Value);
-        //     var startCourseHour = Convert.ToDouble(Startup.StaticConfig.GetSection("AppSettings:CoursesHourStart").Value);
-
-        //     var netHours = startHourMin.Hour - startCourseHour;
-        //     var mins = startHourMin.Minute;
-
-        //     var top = scheduleHourSize * (netHours + (double)mins / 60) + 1 * netHours;
-        //     top = Math.Round(top, 2);
-        //     return (top + "px").Replace(",", ".");
-        // }
-
-        // public static string CalculateHeight(this DateTime startHourMin, DateTime endHourMin)
-        // {
-        //     // to be retrieved from appSettings
-        //     var scheduleHourSize = Convert.ToDouble(Startup.StaticConfig.GetSection("AppSettings:DimHourSchedule").Value);
-
-        //     TimeSpan span = endHourMin.Subtract(startHourMin);
-
-        //     var height = span.TotalMinutes * scheduleHourSize / 60;
-        //     height = Convert.ToDouble(Math.Round(height, 2));
-        //     return (height + "px").Replace(",", ".");
-        // }
 
         //email validation
         public static bool EmailValid(string email)
@@ -124,6 +97,32 @@ namespace SmokeEnGrill.API.Helpers
             }
         }
 
+        public static string UppercaseWords(this string value)
+        {
+            char[] array = value.ToCharArray();
+            // Handle the first letter in the string.
+            if (array.Length >= 1)
+            {
+            if (char.IsLower(array[0]))
+            {
+                array[0] = char.ToUpper(array[0]);
+            }
+            }
+            // Scan through the letters, checking for spaces.
+            // ... Uppercase the lowercase letters following spaces.
+            for (int i = 1; i < array.Length; i++)
+            {
+            if (array[i - 1] == ' ')
+            {
+                if (char.IsLower(array[i]))
+                {
+                array[i] = char.ToUpper(array[i]);
+                }
+            }
+            }
+            return new string(array);
+        }
+
         public static string To5Digits(this string data)
         {
             switch (data.Length)
@@ -144,12 +143,12 @@ namespace SmokeEnGrill.API.Helpers
             return data;
         }
 
-        public static string FormatPhoneNumber(string phone)
+        public static string FormatPhoneNumber(this string phone)
         {
-            if (phone.Length == 8)
+            if (phone.Length == 10)
             {
-                return String.Format("{0}.{1}.{2}.{3}", phone.Substring(0, 2), phone.Substring(2, 2),
-                        phone.Substring(4, 2), phone.Substring(6));
+                return String.Format("{0}.{1}.{2}.{3}.{4}", phone.Substring(0, 2), phone.Substring(2, 2),
+                    phone.Substring(4, 2), phone.Substring(6, 2), phone.Substring(8));
             }
             return phone;
         }

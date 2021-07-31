@@ -1,8 +1,8 @@
-namespace SmokeEnGrill.API.Dtos
+namespace EducNotes.API.Dtos
 {
-    public class UserForLoginDto
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-    }
+  public class UserForLoginDto
+  {
+    public string Username { get; set; }
+    public string Password { get; set; }
+  }
 }

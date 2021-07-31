@@ -3,6 +3,7 @@ using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using AutoMapper;
+using EducNotes.API.Dtos;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
@@ -150,11 +151,6 @@ namespace SmokeEnGrill.API.Data
                 return false;
             }
 
-        }
-
-        public async Task<User> GetUserByCode(string code)
-        {
-            return await _context.Users.FirstOrDefaultAsync(u => u.ValidationCode == code);
         }
 
         public async Task<bool> UserNameExist(string userName)

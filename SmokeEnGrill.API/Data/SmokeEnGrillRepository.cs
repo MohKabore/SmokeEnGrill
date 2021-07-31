@@ -1,1104 +1,1269 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Linq;
-using System.Net;
-using System.Text.Encodings.Web;
 using System.Threading.Tasks;
 using AutoMapper;
-using SmokeEnGrill.API.Dtos;
-using SmokeEnGrill.API.Helpers;
 using SmokeEnGrill.API.Models;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
+using EducNotes.API.Dtos;
+using Microsoft.AspNetCore.Http;
+using EducNotes.API.data;
+using System.Globalization;
+using SmokeEnGrill.API.Helpers;
+using EducNotes.API.Models;
 
 namespace SmokeEnGrill.API.Data
 {
-    public class SmokeEnGrillRepository : ISmokeEnGrillRepository
+  public class SmokeEnGrillRepository : ISmokeEnGrillRepository
+  {
+    private readonly DataContext _context;
+    private readonly IConfiguration _config;
+    private readonly IEmailSender _emailSender;
+    private readonly IMapper _mapper;
+    private readonly UserManager<User> _userManager;
+    public readonly RoleManager<Role> _roleManager;
+    string password;
+    int teacherTypeId, parentTypeId, studentTypeId, adminTypeId;
+    int parentRoleId, memberRoleId, moderatorRoleId, adminRoleId, teacherRoleId;
+    int employeeConfirmEmailId, resetPwdEmailId, updateAccountEmailId, broadcastTokenTypeId;
+    string baseUrl;
+    IHttpContextAccessor _httpContext;
+    CultureInfo frC = new CultureInfo("fr-FR");
+    public readonly ICacheRepository _cache;
+
+    public SmokeEnGrillRepository(DataContext context, IConfiguration config, IEmailSender emailSender,
+        UserManager<User> userManager, IMapper mapper, IHttpContextAccessor httpContext,
+        RoleManager<Role> roleManager, ICacheRepository cache)
     {
-        private readonly DataContext _context;
-        private readonly IConfiguration _config;
-        private readonly IEmailSender _emailSender;
-        private readonly IMapper _mapper;
-        private readonly UserManager<User> _userManager;
-        string password;
-        int teacherTypeId, parentTypeId, studentTypeId, adminTypeId;
-        int parentRoleId, memberRoleId, moderatorRoleId, adminRoleId, teacherRoleId;
-
-        public SmokeEnGrillRepository(DataContext context, IConfiguration config, IEmailSender emailSender,
-            UserManager<User> userManager, IMapper mapper)
-        {
-            _context = context;
-            _config = config;
-            _emailSender = emailSender;
-            _mapper = mapper;
-            _config = config;
-            password = _config.GetValue<String>("AppSettings:defaultPassword");
-            _userManager = userManager;
-            teacherTypeId = _config.GetValue<int>("AppSettings:teacherTypeId");
-            parentTypeId = _config.GetValue<int>("AppSettings:parentTypeId");
-            adminTypeId = _config.GetValue<int>("AppSettings:adminTypeId");
-            studentTypeId = _config.GetValue<int>("AppSettings:studentTypeId");
-            parentRoleId = _config.GetValue<int>("AppSettings:parentRoleId");
-            memberRoleId = _config.GetValue<int>("AppSettings:memberRoleId");
-            moderatorRoleId = _config.GetValue<int>("AppSettings:moderatorRoleId");
-            adminRoleId = _config.GetValue<int>("AppSettings:adminRoleId");
-            teacherRoleId = _config.GetValue<int>("AppSettings:teacherRoleId");
-        }
-
-        public void Add<T>(T entity) where T : class
-        {
-            _context.Add(entity);
-        }
-
-        public async void AddAsync<T>(T entity) where T : class
-        {
-            await _context.AddAsync(entity);
-        }
-
-        public void Update<T>(T entity) where T : class
-        {
-            _context.Update(entity);
-        }
-
-        public void Delete<T>(T entity) where T : class
-        {
-            _context.Remove(entity);
-        }
-
-        public void DeleteAll<T>(List<T> entities) where T : class
-        {
-            _context.RemoveRange(entities);
-        }
-
-        public async Task<bool> SaveAll()
-        {
-            return await _context.SaveChangesAsync() > 0;
-        }
-        public async Task<User> GetUser(int id, bool isCurrentUser)
-        {
-            var query = _context.Users.AsQueryable();
-            // .Include(c => c.Class)
-            // .Include(p => p.Photos).AsQueryable();
-
-            if (isCurrentUser)
-                query = query.IgnoreQueryFilters();
-
-            var user = await query.FirstOrDefaultAsync(u => u.Id == id);
-
-            return user;
-        }
-
-        public async Task<bool> UserNameExist(string userName)
-        {
-            var user = await _context.Users.FirstOrDefaultAsync(e => e.UserName == userName.ToLower());
-            if (user != null)
-                return true;
-            return
-            false;
-        }
-
-
-        public async Task<User> GetUserByCode(string code)
-        {
-            return await _context.Users.FirstOrDefaultAsync(u => u.ValidationCode == code);
-        }
-
-
-        public async Task<User> GetUserByEmail(string email)
-        {
-            return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToUpper() == email.ToUpper());
-        }
-
-
-        public async Task<bool> SendResetPasswordLink(string email, string code)
-        {
-            var emailform = new EmailFormDto
-            {
-                toEmail = email,
-                subject = "Réinitialisation de mot passe ",
-                //content ="Votre code de validation: "+ "<b>"+code.ToString()+"</b>"
-                content = ResetPasswordContent(code)
-            };
-            try
-            {
-                var res = await SendEmail(emailform);
-                return true;
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
-
-        }
-
-        public async Task<bool> SendEmail(EmailFormDto emailFormDto)
-        {
-            try
-            {
-                await _emailSender.SendEmailAsync(emailFormDto.toEmail, emailFormDto.subject, emailFormDto.content);
-                return true;
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
-        }
-
-        private string ResetPasswordContent(string code)
-        {
-            return "<b>SmokeEnGrill 2020</b> a bien enrgistré votre demande de réinitialisation de mot de passe !<br>" +
-                "Vous pouvez utiliser le lien suivant pour réinitialiser votre mot de passe: <br>" +
-                " <a href=" + _config.GetValue<String>("AppSettings:DefaultResetPasswordLink") + code + "/>cliquer ici</a><br>" +
-                "Si vous n'utilisez pas ce lien dans les 3 heures, il expirera." +
-                "Pour obtenir un nouveau lien de réinitialisation de mot de passe, visitez" +
-                " <a href=" + _config.GetValue<String>("AppSettings:DefaultforgotPasswordLink") + "/>réinitialiser son mot de passe</a>.<br>" +
-                "Merci,";
-
-        }
-
-        // public async Task<List<User>> Hotliners()
-        // {
-        //     int hotlinerTypeId = _config.GetValue<int>("AppSettings:HotlinerTypeId");
-
-        //     var hotliners = await _context.Users.Where(j => j.TypeEmpId == hotlinerTypeId)
-        //                                    .OrderBy(j => j.LastName)
-        //                                    .ThenBy(j => j.FirstName)
-        //                                        .ToListAsync();
-        //     return hotliners;
-        // }
-        // public List<int> GetWeekDays(DateTime date)
-        // {
-        //     var dayDate = (int)date.DayOfWeek;
-        //     var dayInt = dayDate == 0 ? 7 : dayDate;
-        //     DateTime monday = date.AddDays(1 - dayInt);
-
-        //     var days = new List<int>();
-        //     for (int i = 0; i < 6; i++)
-        //     {
-        //         days.Add(monday.AddDays(i).Day);
-        //     }
-
-        //     return days;
-        // }
-
-        // public async Task<IEnumerable<Schedule>> GetClassSchedule(int classId)
-        // {
-        //     return await _context.Schedules
-        //         .Include(i => i.Class)
-        //         .Include(i => i.Course)
-        //         .Include(i => i.Teacher)
-        //         .Where(s => s.ClassId == classId)
-        //         .OrderBy(o => o.Day).ThenBy(o => o.StartHourMin).ToListAsync();
-        // }
-
-        // public async Task<IEnumerable<ClassLevelSchedule>> GetClassLevelSchedule(int classLevelId)
-        // {
-        //     return await _context.ClassLevelSchedules
-        //         .Include(i => i.ClassLevel)
-        //         .Include(i => i.Course)
-        //         .Where(s => s.ClassLevelId == classLevelId)
-        //         .OrderBy(o => o.Day).ThenBy(o => o.StartHourMin).ToListAsync();
-        // }
-
-        // public async Task<IEnumerable<Agenda>> GetClassAgenda(int classId, DateTime StartDate, DateTime EndDate)
-        // {
-        //     return await _context.Agendas
-        //                 .Include(i => i.Course)
-        //                 .Where(a => a.ClassId == classId && a.DueDate.Date >= StartDate.Date && a.DueDate.Date <= EndDate.Date)
-        //                 .OrderBy(o => o.DueDate).ToListAsync();
-        // }
-
-        // public async Task<IEnumerable<Agenda>> GetClassAgendaTodayToNDays(int classId, int toNbDays)
-        // {
-        //     DateTime today = DateTime.Now.Date;
-        //     DateTime EndDate = today.AddDays(toNbDays).Date;
-
-        //     return await _context.Agendas
-        //         .Include(i => i.Course)
-        //         .Where(a => a.ClassId == classId && a.DueDate.Date >= today && a.DueDate.Date <= EndDate)
-        //         .OrderBy(o => o.DueDate).ToListAsync();
-        // }
-
-        // public async Task<IEnumerable<User>> GetClassStudents(int classId)
-        // {
-        //     return await _context.Users
-        //         .Include (i => i.Photos)
-        //         //.Include (i => i.Class)
-        //         .Where (u => u.ClassId == classId)
-        //         .OrderBy (e => e.LastName).ThenBy (e => e.FirstName)
-        //         .ToListAsync ();
-        // }
-
-        // public async Task<IEnumerable<CourseSkill>> GetCourseSkills(int courseId)
-        // {
-        //     return await _context.CourseSkills
-        //         .Include(i => i.Skill)
-        //         .Include(i => i.Course)
-        //         .Where(s => s.CourseId == courseId)
-        //         .OrderBy(o => o.Course.Name).ToListAsync();
-        // }
-        // public async Task<Photo> GetPhoto(int id)
-        // {
-        //     var photo = await _context.Photos.IgnoreQueryFilters()
-        //         .FirstOrDefaultAsync(p => p.Id == id);
-
-        //     return photo;
-        // }
-
-        // public async Task<Photo> GetMainPhotoForUser(int userId)
-        // {
-        //     return await _context.Photos.Where(u => u.UserId == userId)
-        //         .FirstOrDefaultAsync(p => p.IsMain);
-        // }
-
-
-
-        // public async Task<IEnumerable<User>> GetChildren(int parentId)
-        // {
-        //     var userIds = _context.UserLinks.Where(u => u.UserPId == parentId).Select(s => s.UserId);
-
-        //     return await _context.Users
-        //         .Include(i => i.Photos)
-        //         .Include(i => i.Class)
-        //         .Where(u => userIds.Contains(u.Id) && u.ValidatedCode == true).ToListAsync();
-        // }
-
-        // public async Task<User> GetParent(int ChildId)
-        // {
-        //     var parent = await _context.UserLinks.FirstOrDefaultAsync(u => u.UserId == ChildId);
-
-        //     return await _context.Users
-        //                     .Include(i => i.Photos)
-        //                     .FirstOrDefaultAsync(p => p.Id == parent.UserPId);
-        // }
-
-        // public async Task<PagedList<User>> GetUsers(UserParams userParams)
-        // {
-        //     var users = _context.Users.Include(p => p.Photos)
-        //         .OrderByDescending(u => u.LastActive).AsQueryable();
-
-        //     users = users.Where(u => u.Id != userParams.userId);
-
-        //     users = users.Where(u => u.Gender == userParams.Gender);
-
-        //     if (userParams.Likers)
-        //     {
-        //         var userLikers = await GetUserLikes(userParams.userId, userParams.Likers);
-        //         users = users.Where(u => userLikers.Contains(u.Id));
-        //     }
-
-        //     if (userParams.Likees)
-        //     {
-        //         var userLikees = await GetUserLikes(userParams.userId, userParams.Likers);
-        //         users = users.Where(u => userLikees.Contains(u.Id));
-        //     }
-
-        //     if (userParams.MinAge != 18 || userParams.MaxAge != 99)
-        //     {
-        //         var minDob = DateTime.Today.AddYears(-userParams.MaxAge - 1);
-        //         var maxDob = DateTime.Today.AddYears(-userParams.MinAge);
-
-        //         users = users.Where(u => u.DateOfBirth >= minDob && u.DateOfBirth <= maxDob);
-        //     }
-
-        //     if (!string.IsNullOrEmpty(userParams.OrderBy))
-        //     {
-        //         switch (userParams.OrderBy)
-        //         {
-        //             case "created":
-        //                 users = users.OrderByDescending(u => u.Created);
-        //                 break;
-        //             default:
-        //                 users.OrderByDescending(u => u.LastActive);
-        //                 break;
-        //         }
-        //     }
-
-        //     return await PagedList<User>.CreateAsync(users, userParams.PageNumber, userParams.PageSize);
-        // }
-
-        // public async Task<Like> GetLike(int userId, int recipientId)
-        // {
-        //     return await _context.Likes.FirstOrDefaultAsync(u => u.LikerId == userId &&
-        //        u.LikeeId == recipientId);
-        // }
-        // public async Task<User> GetSingleUser(string userName)
-        // {
-        //     return await _context.Users.FirstAsync(u => u.UserName == userName);
-        // }
-
-        // private async Task<IEnumerable<int>> GetUserLikes(int id, bool likers)
-        // {
-        //     var user = await _context.Users
-        //         .Include(x => x.Likers)
-        //         .Include(x => x.Likees)
-        //         .FirstOrDefaultAsync(u => u.Id == id);
-
-        //     if (likers)
-        //     {
-        //         return user.Likers.Where(u => u.LikeeId == id).Select(i => i.LikerId);
-        //     }
-        //     else
-        //     {
-        //         return user.Likees.Where(u => u.LikerId == id).Select(i => i.LikeeId);
-        //     }
-        // }
-
-        // public async Task<Class> GetClass(int Id)
-        // {
-        //     return await _context.Classes.FirstOrDefaultAsync(c => c.Id == Id);
-        // }
-
-        // public async Task<IEnumerable<Schedule>> GetScheduleDay(int classId, int day)
-        // {
-        //     return await _context.Schedules
-        //         .Include(i => i.Class)
-        //         .Include(c => c.Course)
-        //         .Where(d => d.Day == day && d.Class.Id == classId)
-        //         .OrderBy(s => s.StartHourMin).ToListAsync();
-        // }
-
-        // public async Task<Agenda> GetAgenda(int agendaId)
-        // {
-        //     return await _context.Agendas.FirstOrDefaultAsync(a => a.Id == agendaId);
-        // }
-
-        // public async Task<IEnumerable<IGrouping<DateTime, Agenda>>> GetClassAgenda(int classId)
-        // {
-        //     return await _context.Agendas
-        //             .Include(i => i.Class)
-        //             .Include(i => i.Course)
-        //             .Where(a => a.ClassId == classId)
-        //             .OrderBy(o => o.DueDate)
-        //             .GroupBy(g => g.DueDate).ToListAsync();
-        // }
-
-        // public async Task<IEnumerable<Agenda>> GetClassAgenda(int classId)
-        // {
-        //     return await _context.Agendas
-        //         .Include(i => i.Class)
-        //         .Include(i => i.Course)
-        //         .Where(a => a.ClassId == classId)
-        //         .OrderBy(o => o.DueDate).ToListAsync();
-        // }
-        // public async Task<IEnumerable<User>> GetStudentsForClass(int classId)
-        // {
-        //     return await _context.Users
-        //         .Include(i => i.Photos)
-        //         .Include(i => i.Class)
-        //         .Where(u => u.ClassId == classId)
-        //         .OrderBy(e => e.LastName).ThenBy(e => e.FirstName)
-        //         .ToListAsync();
-        // }
-
-        // public async Task<IEnumerable<UserType>> getUserTypes()
-        // {
-        //     return await _context.UserTypes.Where(u => u.Name != "Admin").ToListAsync();
-        // }
-
-        // public async Task<bool> EmailExist(string email)
-        // {
-        //     var user = await _context.Users.FirstOrDefaultAsync(e => e.Email == email);
-        //     if (user != null)
-        //         return true;
-        //     return
-        //     false;
-        // }
-
-        // // public async Task<List<coursClass>> GetTeacherCoursesAndClasses(int teacherId)
-        // // {
-        // //     var cousrsesusers = await _context.CourseUsers.Include(c => c.Course).Where(a => a.TeacherId == teacherId).Select(e => e.Course).ToListAsync();
-        // //     var classcourses = new List<coursClass>();
-        // //     foreach (var cours in cousrsesusers)
-        // //     {
-        // //         classcourses.Add(new coursClass
-        // //         {
-        // //             Course = cours,
-        // //             classes = _context.ClassCourses.Include(c => c.Class).Where(c => c.CourseId == cours.Id).ToList()
-
-        // //         });
-        // //     }
-        // //     return classcourses;
-        // // }
-
-        // public async Task<bool> AddUserPreInscription(UserForRegisterDto userForRegister, int insertUserId)
-        // {
-
-        //     var userToCreate = _mapper.Map<User>(userForRegister);
-        //     var code = Guid.NewGuid();
-        //     userToCreate.UserName = code.ToString();
-        //     userToCreate.ValidationCode = code.ToString();
-        //     userToCreate.ValidatedCode = false;
-        //     userToCreate.EmailConfirmed = false;
-        //     userToCreate.UserName = code.ToString();
-        //     bool resultStatus = false;
-
-        //     using (var identityContextTransaction = _context.Database.BeginTransaction())
-        //     {
-        //         try
-        //         {
-        //             if (userToCreate.UserTypeId == teacherTypeId)
-        //             {
-        //                 //enregistrement du teacher
-        //                 var result = await _userManager.CreateAsync(userToCreate, password);
-        //                 if (result.Succeeded)
-        //                 {
-        //                     // enregistrement du RoleTeacher
-        //                     var role = await _context.Roles.FirstOrDefaultAsync(a => a.Id == teacherRoleId);
-        //                     var appUser = await _userManager.Users
-        //                         .FirstOrDefaultAsync(u => u.NormalizedUserName == userToCreate.UserName);
-        //                     _userManager.AddToRoleAsync(appUser, role.Name).Wait();
-
-        //                     //enregistrement de des cours du professeur
-        //                     if (userForRegister.CourseIds != null)
-        //                     {
-        //                         foreach (var course in userForRegister.CourseIds)
-        //                         {
-        //                             Add(new TeacherCourse { CourseId = course, TeacherId = userToCreate.Id });
-        //                         }
-        //                     }
-
-        //                     // Enregistrement dans la table Email
-        //                     if (userToCreate.Email != null)
-        //                     {
-        //                         var callbackUrl = _config.GetValue<String>("AppSettings:DefaultEmailValidationLink") + userToCreate.ValidationCode;
-
-        //                         var emailToSend = new Email
-        //                         {
-        //                             InsertUserId = insertUserId,
-        //                             UpdateUserId = userToCreate.Id,
-        //                             StatusFlag = 0,
-        //                             Subject = "Confirmation de compte",
-        //                             ToAddress = userToCreate.Email,
-        //                             Body = $"veuillez confirmez votre code au lien suivant : <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicker ici</a>.",
-        //                             FromAddress = "no-reply@SmokeEnGrill.com",
-        //                             EmailTypeId = _config.GetValue<int>("AppSettings:confirmationEmailtypeId")
-        //                         };
-        //                         Add(emailToSend);
-        //                     }
-        //                     if (await SaveAll())
-        //                     {
-        //                         // fin de la transaction
-        //                         identityContextTransaction.Commit();
-        //                         resultStatus = true;
-
-        //                     }
-        //                     else
-        //                         resultStatus = true;
-        //                 }
-        //                 else
-        //                     resultStatus = false;
-        //             }
-
-        //         }
-        //         catch (System.Exception)
-        //         {
-
-        //             return resultStatus = false;
-        //         }
-        //     }
-        //     return resultStatus;
-        // }
-        // public async Task<Course> GetCourse(int Id)
-        // {
-        //     return await _context.Courses.FirstOrDefaultAsync(c => c.Id == Id);
-        // }
-        // public bool SendSms(List<string> phoneNumbers, string content)
-        // {
-        //     try
-        //     {
-        //         foreach (var phonrNumber in phoneNumbers)
-        //         {
-        //             //envoi sms clickatell :  using restSharp
-        //             var curl = "https://platform.clickatell.com/messages/http/" +
-        //                 "send?apiKey=7z94hfu_RnWsCNW-XgDOxw==&to=" + phonrNumber + "&content=" + content;
-        //             var client = new RestClient(curl);
-        //             var request = new RestRequest(Method.GET);
-        //             request.AddHeader("content-type", "application/x-www-form-uSmokeEnGrillncoded");
-        //             request.AddHeader("cache-control", "no-cache");
-        //             request.AddHeader("header1", "headerval");
-        //             request.AddParameter("application/x-www-form-uSmokeEnGrillncoded", "bodykey=bodyval", ParameterType.RequestBody);
-        //             IRestResponse response = client.Execute(request);
-        //         }
-        //         return true;
-        //     }
-        //     catch (System.Exception)
-        //     {
-
-        //         return false;
-        //     }
-        // }
-
-        // public async Task<IEnumerable<City>> GetAllCities()
-        // {
-        //     return (await _context.Cities.OrderBy(c => c.Name).ToListAsync());
-        // }
-
-        // public async Task<IEnumerable<District>> GetAllGetDistrictsByCityIdCities(int id)
-        // {
-        //     return (await _context.Districts.Where(c => c.CityId == id).OrderBy(c => c.Name).ToListAsync());
-        // }
-
-        // public void AddInscription(int levelId, int userId)
-        // {
-        //     var nouvelle_incrpition = new Inscription
-        //     {
-        //         InsertDate = DateTime.Now,
-        //         ClassLevelId = levelId,
-        //         UserId = userId,
-        //         Validated = false
-        //     };
-        //     Add(nouvelle_incrpition);
-        // }
-
-        // public void AddUserLink(int userId, int parentId)
-        // {
-        //     var nouveau_link = new UserLink
-        //     {
-        //         UserId = userId,
-        //         UserPId = parentId
-        //     };
-        //     Add(nouveau_link);
-        // }
-
-        // private string EditValidationContent(string userName, string code)
-        // {
-        //     return "<h3><span>Educt'Notes</span></h3> <br>" +
-        //         "bonjour <b>" + userName + ",</b>" +
-        //         "<p>Merci de bien vouloir valider votre compte au lien suivant :" +
-        //         " <a href=" + _config.GetValue<String>("AppSettings:DefaultEmailValidationLink") + code + " /> cliquer ici</a></p> <br>";
-
-        // }
-
-        // public IEnumerable<ClassAgendaToReturnDto> GetAgendaListByDueDate(IEnumerable<Agenda> agendaItems)
-        // {
-        //     //selection de toutes les differentes dates
-        //     var dueDates = agendaItems.OrderBy(o => o.DueDate).Select(e => e.DueDate).Distinct();
-
-        //     var agendasToReturn = new List<ClassAgendaToReturnDto>();
-        //     foreach(var currDate in dueDates) {
-        //         var currentDateAgendas = agendaItems.Where(e => e.DueDate == currDate);
-        //         var agenda = new ClassAgendaToReturnDto();
-        //         agenda.dtDueDate = currDate;
-        //         agenda.DueDate = currDate.ToLongDateString();
-        //         agenda.DueDateDay = currDate.Day;
-        //         agenda.NbTasks = currentDateAgendas.Count();
-        //         var dayInt = (int)currDate.DayOfWeek;
-        //         agenda.DayInt = dayInt == 0 ? 7 : dayInt;
-        //         agenda.Courses = new List<CourseTask>();
-        //         foreach (var a in currentDateAgendas) {
-        //             agenda.Courses.Add(new CourseTask {
-        //                 CourseId = a.Course.Id,
-        //                 CourseName = a.Course.Name,
-        //                 CourseColor = a.Course.Color,
-        //                 TaskDesc = a.TaskDesc,
-        //                 DateAdded = a.DateAdded.ToLongDateString(),
-        //                 ShortDateAdded = a.DateAdded.ToShortDateString()
-        //             });
-        //         }
-
-        //         agendasToReturn.Add(agenda);
-        //     }
-
-        //     return agendasToReturn;
-        // }
-
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////
-        // /////////////////////////////// DATA FROM MOHAMED KABORE ////////////////////////////////////////////
-        // /////////////////////////////////////////////////////////////////////////////////////////////////////
-        // public async Task<IEnumerable<ClassType>> GetClassTypes()
-        // {
-        //     return await _context.ClassTypes.OrderBy(a => a.Name).ToListAsync();
-        // }
-
-        // public async Task<int> AddSelfRegister(User user, string roleName, bool sendLink, int currentUserId)
-        // {
-        //     var userIdToReturn = 0;
-        //     user.Created = DateTime.Now;
-        //     using (var identityContextTransaction = _context.Database.BeginTransaction())
-        //     {
-        //         try
-        //         {
-        //             var result = await _userManager.CreateAsync(user, password);
-
-        //             if (result.Succeeded)
-        //             {
-        //                 var appUser = await _userManager.Users.FirstOrDefaultAsync(u => u.NormalizedUserName == user.UserName);
-        //                 userIdToReturn = appUser.Id;
-
-        //                 _userManager.AddToRoleAsync(appUser, roleName).Wait();
-        //                 if (sendLink)
-        //                 {
-        //                     // envoi du lien
-        //                     var callbackUrl = _config.GetValue<String>("AppSettings:DefaultEmailValidationLink") + appUser.ValidationCode;
-        //                     var email = new Email
-        //                     {
-
-        //                         InsertUserId = currentUserId,
-        //                         UpdateUserId = appUser.Id,
-        //                         StatusFlag = 0,
-        //                         Subject = "Confirmation de compte",
-        //                         ToAddress = appUser.Email,
-        //                         Body = $"veuillez confirmez votre code au lien suivant : <a href='{HtmlEncoder.Default.Encode(callbackUrl)}'>clicker ici</a>.",
-        //                         FromAddress = "no-reply@SmokeEnGrill.com",
-        //                         EmailTypeId = _config.GetValue<int>("AppSettings:confirmationEmailtypeId")
-        //                     };
-        //                     Add(email);
-        //                     await SaveAll();
-        //                 }
-        //             }
-
-        //             identityContextTransaction.Commit();
-        //         }
-        //         catch (System.Exception)
-        //         {
-        //             identityContextTransaction.Rollback();
-        //             userIdToReturn = 0;
-        //         }
-        //     }
-
-        //     return userIdToReturn;
-        // }
-
-        // public async Task<List<string>> GetEmails()
-        // {
-        //     return await _context.Users.Where(a => a.Email != null).Select(a => a.Email).ToListAsync();
-        // }
-
-        // public async Task<List<string>> GetUserNames()
-        // {
-        //     return await _context.Users.Where(a => a.UserName != null).Select(a => a.UserName).ToListAsync();
-        // }
-
-        // public async Task<List<ClassLevel>> GetLevels()
-        // {
-        //     return await _context.ClassLevels.OrderBy(c => c.DsplSeq).ToListAsync();
-        // }
-
-
-
-        // public async Task sendOk(int userTypeId, int userId)
-        // {
-        //     if (userTypeId == studentTypeId)
-        //     {
-        //         // envoi de mail de l'affectation de l'eleve au professeur
-
-        //         // recuperation des emails de ses parents
-
-        //         var parents = await _context.UserLinks
-        //             .Include(c => c.UserP)
-        //             .Where(u => u.UserId == userId).Select(c => c.UserP)
-        //             .ToListAsync();
-
-        //         // récupération de nom de la classe de l'eleve
-        //         var student = await _context.Users.Include(c => c.Class)
-        //             .FirstOrDefaultAsync(u => u.Id == userId);
-
-        //         // formatage du mail
-        //         foreach (var parent in parents)
-        //         {
-        //             var emailform = new EmailFormDto
-        //             {
-        //                 toEmail = parent.Email,
-        //                 subject = "Confirmation mise en salle de votre enfant ",
-        //                 content = "<b> Bonjour " + parent.LastName + " " + parent.FirstName + "</b>, <br>" +
-        //                 "Votre enfant <b>" + student.FirstName + " " + student.FirstName +
-        //                 " </b> a bien été enregistré(s) dans la classe de <b>" + student.Class.Name
-        //             };
-        //             await SendEmail(emailform);
-        //         }
-
-        //     }
-        // }
-
-        // public async Task<List<UserSpaCodeDto>> ParentSelfInscription(int parentId, List<UserForUpdateDto> userToUpdate)
-        // {
-        //     var usersSpaCode = new List<UserSpaCodeDto>();
-        //     var children = await _context.UserLinks.Where(u =>u.UserPId == parentId).Select(u => u.User).ToListAsync();
-        //     int cpt = 0;
-        //     using (var identityContextTransaction = _context.Database.BeginTransaction())
-        //     {
-        //         try
-        //         {
-
-        //             foreach (var user in userToUpdate)
-        //             {
-
-        //                 if (user.UserTypeId == parentTypeId)
-        //                 {
-        //                     var parentFromRepo = await GetUser(parentId, true);
-        //                     parentFromRepo.UserName = user.UserName.ToLower();
-        //                     parentFromRepo.LastName = user.LastName;
-        //                     parentFromRepo.FirstName = user.FirstName;
-        //                     if (user.DateOfBirth != null)
-        //                         parentFromRepo.DateOfBirth = Convert.ToDateTime(user.DateOfBirth);
-        //                     parentFromRepo.CityId = user.CityId;
-        //                     parentFromRepo.DistrictId = user.DistrictId;
-        //                     parentFromRepo.PhoneNumber = user.PhoneNumber;
-        //                     parentFromRepo.SecondPhoneNumber = user.SecondPhoneNumber;
-        //                     // configuration du nouveau mot de passe
-        //                     var newPassword = _userManager.PasswordHasher.HashPassword(parentFromRepo, user.Password);
-        //                     parentFromRepo.PasswordHash = newPassword;
-        //                     parentFromRepo.ValidatedCode = true;
-        //                     parentFromRepo.EmailConfirmed = true;
-        //                     parentFromRepo.ValidationDate = DateTime.Now;
-        //                     var res = await _userManager.UpdateAsync(parentFromRepo);
-
-        //                     if (res.Succeeded)
-        //                     {
-        //                         // ajout dans la table Email
-        //                         var email = new Email();
-        //                         email.InsertDate = DateTime.Now;
-        //                         email.InsertUserId = parentId;
-        //                         email.UpdateUserId = parentId;
-        //                         email.StatusFlag = 0;
-        //                         email.Subject = "Compte confirmé";
-        //                         email.ToAddress = parentFromRepo.Email;
-        //                         email.Body = "<b> " + parentFromRepo.LastName + " " + parentFromRepo.FirstName + "</b>, votre compte a bien été enregistré";
-        //                         email.FromAddress = "no-reply@SmokeEnGrill.com";
-        //                         email.EmailTypeId = _config.GetValue<int>("AppSettings:confirmedEmailtypeId");
-        //                         Add(email);
-        //                         // retour du code du userId et du codeSpa
-        //                         usersSpaCode.Add(new UserSpaCodeDto { UserId = parentFromRepo.Id, SpaCode = Convert.ToInt32(user.SpaCode) });
-        //                     }
-
-        //                 }
-        //                 if (user.UserTypeId == studentTypeId)
-        //                 {
-        //                     var child = children[cpt];
-        //                     int classLevelId = Convert.ToInt32(user.LevelId);
-        //                     child.UserName = user.UserName.ToLower();
-        //                     child.LastName = user.LastName;
-        //                     child.FirstName = user.FirstName;
-        //                     if (child.DateOfBirth != null)
-        //                         child.DateOfBirth = Convert.ToDateTime(user.DateOfBirth);
-        //                     child.CityId = user.CityId;
-        //                     child.DistrictId = user.DistrictId;
-        //                     child.PhoneNumber = user.PhoneNumber;
-        //                     child.SecondPhoneNumber = user.SecondPhoneNumber;
-        //                     // configuration du mot de passe
-        //                     var newPass = _userManager.PasswordHasher.HashPassword(child, user.Password);
-        //                     child.PasswordHash = newPass;
-        //                     child.ValidatedCode = true;
-        //                     child.EmailConfirmed = false;
-        //                     if (!string.IsNullOrEmpty(child.Email))
-        //                         child.EmailConfirmed = true;
-        //                     child.ValidationDate = DateTime.Now;
-        //                     child.TempData = 1;
-        //                     var res = await _userManager.UpdateAsync(child);
-
-        //                     if (res.Succeeded)
-        //                     {
-        //                         //enregistrement de l inscription
-        //                         var insc = new Inscription
-        //                         {
-        //                             InsertDate = DateTime.Now,
-        //                             ClassLevelId = classLevelId,
-        //                             UserId = child.Id,
-        //                             InsertUserId = parentId,
-        //                             InscriptionTypeId = _config.GetValue<int>("AppSettings:parentInscTypeId"),
-
-        //                             Validated = false
-        //                         };
-        //                         Add(insc);
-        //                         usersSpaCode.Add(new UserSpaCodeDto { UserId = child.Id, SpaCode = Convert.ToInt32(user.SpaCode) });
-        //                         cpt = cpt + 1;
-        //                     }
-
-        //                 }
-        //             }
-
-        //             if (await SaveAll())
-        //                 identityContextTransaction.Commit();
-        //         }
-        //         catch (System.Exception)
-        //         {
-        //             identityContextTransaction.Rollback();
-        //             usersSpaCode = new List<UserSpaCodeDto>();
-        //         }
-        //     }
-        //     return usersSpaCode;
-
-        // }
-
-        // public async Task<List<UserEvalsDto>> GetUserGrades(int userId, int classId)
-        // {
-        //     //get user courses
-        //     var userCourses = await (from course in _context.ClassCourses
-        //                              join user in _context.Users on course.ClassId equals user.ClassId
-        //                              where user.ClassId == classId
-        //                              orderby course.Course.Name
-        //                              select course.Course).Distinct().ToListAsync();
-
-        //     var aclass = await _context.Classes.FirstOrDefaultAsync(c => c.Id == classId);
-
-        //     List<UserEvalsDto> coursesWithEvals = new List<UserEvalsDto>();
-
-        //     var periods = await _context.Periods.OrderBy(p => p.StartDate).ToListAsync();
-
-        //     //loop on user courses - get data for each course 
-        //     for (int i = 0; i < userCourses.Count(); i++)
-        //     {
-
-        //         var acourse = userCourses[i];
-
-        //         //get all evaluations of the selected course and current userId
-        //         var userEvals = await _context.UserEvaluations
-        //                             .Include(e => e.Evaluation).ThenInclude(e => e.EvalType)
-        //                             .OrderBy(o => o.Evaluation.EvalDate)
-        //                             .Where(e => e.UserId == userId && e.Evaluation.GradeInLetter == false &&
-        //                                e.Evaluation.CourseId == acourse.Id && e.Evaluation.Graded == true)
-        //                             .Distinct().ToListAsync();
-
-        //         // get general Evals data for the current user course
-        //         UserEvalsDto userEvalsDto = GetUserCourseEvals(userEvals, acourse, aclass);
-
-        //         // get evals by period for the current user course
-        //         userEvalsDto.PeriodEvals = new List<PeriodEvalsDto>();
-        //         foreach (var period in periods)
-        //         {
-        //             PeriodEvalsDto ped = new PeriodEvalsDto();
-        //             ped.PeriodId = period.Id;
-        //             ped.PeriodName = period.Name;
-        //             ped.PeriodAbbrev = period.Abbrev;
-        //             ped.Active = period.Active;
-
-        //             var userPeriodEvals = userEvals.Where(e => e.Evaluation.PeriodId == period.Id).ToList();
-        //             if (userPeriodEvals.Count() > 0)
-        //             {
-        //                 UserEvalsDto periodEvals = GetUserCourseEvals(userPeriodEvals, acourse, aclass);
-        //                 ped.UserCourseAvg = periodEvals.UserCourseAvg;
-        //                 ped.ClassCourseAvg = periodEvals.ClassCourseAvg;
-        //                 ped.grades = periodEvals.grades;
-        //             }
-        //             else
-        //             {
-        //                 ped.UserCourseAvg = -1000;
-        //             }
-
-        //             userEvalsDto.PeriodEvals.Add(ped);
-        //         }
-
-        //         coursesWithEvals.Add(userEvalsDto);
-        //     }
-
-        //     return coursesWithEvals;
-        // }
-
-        // public UserEvalsDto GetUserCourseEvals(List<UserEvaluation> UserEvals, Course acourse, Class aclass)
-        // {
-        //     UserEvalsDto userEvalsDto = new UserEvalsDto();
-        //     userEvalsDto.CourseId = acourse.Id;
-        //     userEvalsDto.CourseName = acourse.Name;
-        //     userEvalsDto.CourseAbbrev = acourse.Abbreviation;
-        //     userEvalsDto.GradedOutOf = 20;
-
-        //     double gradesSum = 0;
-        //     double coeffSum = 0;
-
-        //     // are evals evailable fro the cuurent course?
-        //     if (UserEvals.Count() > 0)
-        //     {
-
-        //         List<GradeDto> grades = new List<GradeDto>();
-
-        //         for (int j = 0; j < UserEvals.Count(); j++)
-        //         {
-        //             // calculate each grade of the selected course
-        //             var elt = UserEvals[j];
-        //             if (elt.Grade.IsNumeric())
-        //             {
-        //                 var evalDate = elt.Evaluation.EvalDate.ToShortDateString();
-        //                 var evalType = elt.Evaluation.EvalType.Name;
-        //                 var evalName = elt.Evaluation.Name;
-        //                 double gradeMax = Convert.ToDouble(elt.Evaluation.MaxGrade);
-        //                 double gradeValue = Convert.ToDouble(elt.Grade.Replace(".", ","));
-        //                 // grade are ajusted to 20 as MAx. Avg is on 20
-        //                 double ajustedGrade = Math.Round(20 * gradeValue / gradeMax, 2);
-        //                 double coeff = elt.Evaluation.Coeff;
-        //                 //data for course average
-        //                 gradesSum += ajustedGrade * coeff;
-        //                 coeffSum += coeff;
-
-        //                 // get class grades for the current user grade (evaluation)
-        //                 var EvalClassGrades = _context.UserEvaluations
-        //                     .Where(e => e.EvaluationId == elt.EvaluationId &&
-        //                        e.Evaluation.GradeInLetter == false && e.Evaluation.Graded == true &&
-        //                        e.Grade.IsNumeric())
-        //                     .Select(e => e.Grade).ToList();
-
-        //                 double classMin = 999999;
-        //                 double classMax = -999999;
-        //                 //get class min and max of evaluation
-        //                 foreach (var item in EvalClassGrades)
-        //                 {
-        //                     var ddd = item;
-        //                     var grade = Convert.ToDouble(item.Replace(".", ","));
-        //                     classMin = grade < classMin ? grade : classMin;
-        //                     classMax = grade > classMax ? grade : classMax;
-        //                 }
-        //                 double EvalGradeMin = classMin;
-        //                 double EvalGradeMax = classMax;
-
-        //                 //enter grade data "as it is" in the user grades data list
-        //                 GradeDto gradeDto = new GradeDto();
-        //                 gradeDto.EvalType = evalType;
-        //                 gradeDto.EvalDate = evalDate;
-        //                 gradeDto.EvalName = evalName;
-        //                 gradeDto.Grade = Math.Round(gradeValue, 2);
-        //                 gradeDto.GradeMax = gradeMax;
-        //                 gradeDto.Coeff = coeff;
-        //                 gradeDto.ClassGradeMin = EvalGradeMin;
-        //                 gradeDto.ClassGradeMax = EvalGradeMax;
-        //                 grades.Add(gradeDto);
-        //             }
-        //         }
-
-        //         //calculate user grade avg for the selected course
-        //         double gradesAvg = Math.Round(gradesSum / coeffSum, 2);
-        //         //data for general user average
-
-        //         //get course coeff
-        //         var courseCoeffData = _context.CourseCoefficients
-        //             .FirstOrDefault(c => c.ClassLevelid == aclass.ClassLevelId &&
-        //                 c.CourseId == acourse.Id && c.ClassTypeId == aclass.ClassTypeId);
-        //         double courseCoeff = courseCoeffData.Coefficient;
-
-        //         //get the class course average - to be compared with the user average
-        //         double ClassCourseAvg = GetClassCourseEvalData(acourse.Id, aclass.Id);
-
-        //         userEvalsDto.UserCourseAvg = gradesAvg;
-        //         userEvalsDto.ClassCourseAvg = ClassCourseAvg;
-        //         userEvalsDto.CourseCoeff = courseCoeff;
-        //         userEvalsDto.grades = grades;
-        //     }
-        //     else
-        //     {
-        //         // there is no grade for the course - User course AVG set to -1000.
-        //         userEvalsDto.UserCourseAvg = -1000;
-        //     }
-
-        //     return userEvalsDto;
-        // }
-
-        // public double GetClassCourseEvalData(int courseId, int classId)
-        // {
-        //     var ClassEvals = _context.UserEvaluations
-        //         .Include(e => e.Evaluation)
-        //         .OrderBy(o => o.Evaluation.EvalDate)
-        //         .Where(e => e.Evaluation.ClassId == classId && e.Evaluation.GradeInLetter == false &&
-        //            e.Evaluation.CourseId == courseId && e.Evaluation.Graded == true &&
-        //            e.Grade.IsNumeric())
-        //         .Distinct().ToList();
-
-        //     double gradesSum = 0;
-        //     double coeffSum = 0;
-        //     for (int i = 0; i < ClassEvals.Count(); i++)
-        //     {
-        //         var elt = ClassEvals[i];
-        //         double gradeMax = Convert.ToDouble(elt.Evaluation.MaxGrade);
-        //         double gradeValue = Convert.ToDouble(elt.Grade);
-        //         // grade are ajusted to 20 as MAx. Avg is on 20
-        //         double ajustedGrade = Math.Round(20 * gradeValue / gradeMax, 2);
-        //         double coeff = elt.Evaluation.Coeff;
-        //         gradesSum += ajustedGrade * coeff;
-        //         coeffSum += coeff;
-        //     }
-
-        //     return Math.Round(gradesSum / coeffSum, 2);
-        // }
-
-        // public async Task<List<AgendaForListDto>> GetUserClassAgenda(int classId, DateTime startDate, DateTime endDate)
-        // {
-        //     List<Agenda> classAgenda = await _context.Agendas
-        //         .Include(i => i.Course)
-        //         .OrderBy(o => o.DueDate)
-        //         .Where(a => a.ClassId == classId && a.DueDate.Date >= startDate && a.DueDate <= endDate)
-        //         .ToListAsync();
-
-        //     var agendaDates = classAgenda.OrderBy(o => o.DueDate).Select(a => a.DueDate).Distinct().ToList();
-
-        //     List<AgendaForListDto> AgendaList = new List<AgendaForListDto>();
-        //     foreach (var date in agendaDates)
-        //     {
-        //         AgendaForListDto afld = new AgendaForListDto();
-        //         afld.DueDate = date;
-        //         //CultureInfo frC = new CultureInfo("fr-FR");
-        //         var shortDueDate = date.ToString("ddd dd MMM");
-        //         var longDueDate = date.ToString("dd MMMM yyyy");
-        //         var dueDateAbbrev = date.ToString("ddd dd").Replace(".", "");
-
-        //         afld.ShortDueDate = shortDueDate;
-        //         afld.LongDueDate = longDueDate;
-        //         afld.DueDateAbbrev = dueDateAbbrev;
-
-        //         //get agenda tasks Done Status
-        //         afld.AgendaItems = new List<AgendaItemDto>();
-        //         var agendaItems = classAgenda.Where(a => a.DueDate.Date == date.Date).ToList();
-        //         foreach (var item in agendaItems)
-        //         {
-        //             AgendaItemDto aid = new AgendaItemDto();
-        //             aid.CourseId = item.CourseId;
-        //             aid.CourseName = item.Course.Name;
-        //             aid.CourseAbbrev = item.Course.Abbreviation;
-        //             aid.CourseColor = item.Course.Color;
-        //             aid.strDateAdded = item.DateAdded.ToShortDateString();
-        //             aid.TaskDesc = item.TaskDesc;
-        //             aid.AgendaId = item.Id;
-        //             aid.Done = item.Done;
-        //             afld.AgendaItems.Add(aid);
-        //         }
-        //         afld.NbItems = agendaItems.Count();
-
-        //         AgendaList.Add(afld);
-        //     }
-
-        //     return AgendaList;
-        // }
-
-        // public async Task<int> GetAssignedChildrenCount(int parentId)
-        // {
-        //     var userIds = await _context.UserLinks.Where(u => u.UserPId == parentId).Select(s => s.UserId)
-        //                                             .ToListAsync();
-
-        //     return userIds.Count();
-        // }
-
-        // public async Task<bool> SaveProductSelection(int userPid, int userId, List<ServiceSelectionDto> products)
-        // {
-        //     // insertion dans la table order 
-        //     int total = products.Sum(x => Convert.ToInt32(x.Price));
-        //     var newOrder = new Order  {
-        //             TotalHT =total,
-        //             TotalTTC = total,
-        //             Discount = 0,
-        //             TVA = 0,
-        //             UserPId = userPid,
-        //             UserId = userId
-        //         };
-        //         _context.Add(newOrder);
-
-        //     foreach (var prod in products)
-        //     {
-        //         var newOrderLine = new OrderLine  {
-        //             OrderId = newOrder.Id,
-        //             ProductId = prod.Id,
-        //             AmountHT = prod.Price,
-        //             AmountTTC = prod.Price,
-        //             Discount = 0,
-        //             Qty = 1,
-        //             TVA=0
-
-        //         };
-        //         _context.Add(newOrderLine);
-        //     }
-        //     if(await _context.SaveChangesAsync()>0)
-        //     return true;
-
-        //     return false;
-        // }
+      _userManager = userManager;
+      _roleManager = roleManager;
+      _cache = cache;
+      _context = context;
+      _httpContext = httpContext;
+      _config = config;
+      _emailSender = emailSender;
+      _mapper = mapper;
+      _config = config;
+      password = _config.GetValue<String>("AppSettings:defaultPassword");
+      adminTypeId = _config.GetValue<int>("AppSettings:adminTypeId");
+      adminRoleId = _config.GetValue<int>("AppSettings:adminRoleId");
+      adminTypeId = _config.GetValue<int>("AppSettings:adminTypeId");
+      employeeConfirmEmailId = _config.GetValue<int>("AppSettings:employeeConfirmEmailId");
+      baseUrl = _config.GetValue<String>("AppSettings:DefaultLink");
+      resetPwdEmailId = _config.GetValue<int>("AppSettings:resetPwdEmailId");
+      updateAccountEmailId = _config.GetValue<int>("AppSettings:updateAccountEmailId");
+      broadcastTokenTypeId = _config.GetValue<int>("AppSettings:broadcastTokenTypeId");
     }
+
+    public void Add<T>(T entity) where T : class
+    {
+      _context.Add(entity);
+    }
+
+    public async void AddAsync<T>(T entity) where T : class
+    {
+      await _context.AddAsync(entity);
+    }
+
+    public void Update<T>(T entity) where T : class
+    {
+      _context.Update(entity);
+    }
+
+    public void Delete<T>(T entity) where T : class
+    {
+      _context.Remove(entity);
+    }
+
+    public void DeleteAll<T>(List<T> entities) where T : class
+    {
+      _context.RemoveRange(entities);
+    }
+
+    public async Task<bool> SaveAll()
+    {
+      return await _context.SaveChangesAsync() > 0;
+    }
+    public async Task<User> GetUser(int id, bool isCurrentUser)
+    {
+      var query = _context.Users.AsQueryable();
+      // .Include(c => c.Class)
+      // .Include(p => p.Photos).AsQueryable();
+
+      if (isCurrentUser)
+        query = query.IgnoreQueryFilters();
+
+      var user = await query.FirstOrDefaultAsync(u => u.Id == id);
+
+      return user;
+    }
+
+    public async Task<bool> UserNameExist(string userName, int currentUserId)
+    {
+      List<User> users = await _cache.GetUsers();
+
+      var user = users.Where(u => u.Id != currentUserId)
+                      .FirstOrDefault(e => e.UserName.ToLower() == userName.ToLower());
+
+      if (user != null)
+      {
+        return true;
+      }
+      return false;
+    }
+
+    public async Task<User> GetUserByEmail(string email)
+    {
+      return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToUpper() == email.ToUpper());
+    }
+
+    public async Task<bool> SendEmail(EmailFormDto emailFormDto)
+    {
+      try
+      {
+        await _emailSender.SendEmailAsync(emailFormDto.toEmail, emailFormDto.subject, emailFormDto.content);
+        return true;
+      }
+      catch (System.Exception)
+      {
+        return false;
+      }
+    }
+
+    private string ResetPasswordContent(string code)
+    {
+      return "<b>SmokeEnGrill 2020</b> a bien enrgistré votre demande de réinitialisation de mot de passe !<br>" +
+          "Vous pouvez utiliser le lien suivant pour réinitialiser votre mot de passe: <br>" +
+          " <a href=" + _config.GetValue<String>("AppSettings:DefaultResetPasswordLink") + code + "/>cliquer ici</a><br>" +
+          "Si vous n'utilisez pas ce lien dans les 3 heures, il expirera." +
+          "Pour obtenir un nouveau lien de réinitialisation de mot de passe, visitez" +
+          " <a href=" + _config.GetValue<String>("AppSettings:DefaultforgotPasswordLink") + "/>réinitialiser son mot de passe</a>.<br>" +
+          "Merci,";
+
+    }
+
+    public string GetAppSubDomain()
+    {
+      string subdomain = "";
+      //To get subdomain
+      string[] fullAddress = _httpContext.HttpContext?.Request?.Headers?["Host"].ToString()?.Split('.');
+      if (fullAddress != null)
+      {
+        subdomain = fullAddress[0].ToLower();
+        if (subdomain == "localhost:5000" || subdomain == "www" || subdomain == "educnotes")
+        {
+          subdomain = "";
+        }
+      }
+
+      return subdomain;
+    }
+
+    public async Task<Photo> GetPhoto(int id)
+    {
+      var photo = await _context.Photos.IgnoreQueryFilters()
+          .FirstOrDefaultAsync(p => p.Id == id);
+
+      return photo;
+    }
+
+    public Boolean DeletePhotoFromCloudinary(string publicId)
+    {
+      var deleteParams = new DeletionParams(publicId);
+      var result = _cloudinary.Destroy(deleteParams);
+      if (result.Result != "ok")
+      {
+        return false;
+      }
+
+      return true;
+    }
+
+    public async Task<ErrorDto> DeletePhoto(int userId, int id)
+    {
+      ErrorDto error = new ErrorDto();
+      error.NoError = true;
+
+      var user = await GetUser(userId, true);
+      var photoFromRepo = await GetPhoto(id);
+
+      if (photoFromRepo.IsMain)
+      {
+        error.NoError = false;
+        error.Message = "You cannot delete your main photo";
+      }
+
+      if (photoFromRepo.PublicId != null)
+      {
+        var deleteParams = new DeletionParams(photoFromRepo.PublicId);
+        var result = _cloudinary.Destroy(deleteParams);
+        if (result.Result == "ok")
+        {
+          Delete(photoFromRepo);
+        }
+      }
+
+      if (photoFromRepo.PublicId == null)
+      {
+        Delete(photoFromRepo);
+      }
+
+      if (await SaveAll())
+      {
+        error.NoError = true;
+        return error;
+      }
+
+      error.NoError = false;
+      error.Message = "failed to delete the photo";
+      return error;
+    }
+
+    public async Task<Photo> GetMainPhotoForUser(int userId)
+    {
+      return await _context.Photos.Where(u => u.UserId == userId)
+          .FirstOrDefaultAsync(p => p.IsMain);
+    }
+
+    // public async Task<PagedList<User>> GetUsers(UserParams userParams)
+    // {
+    //     var users = _context.Users.Include(p => p.Photos)
+    //         .OrderByDescending(u => u.LastActive).AsQueryable();
+
+    //     users = users.Where(u => u.Id != userParams.userId);
+
+    //     users = users.Where(u => u.Gender == userParams.Gender);
+
+    //     if (userParams.Likers)
+    //     {
+    //         var userLikers = await GetUserLikes(userParams.userId, userParams.Likers);
+    //         users = users.Where(u => userLikers.Contains(u.Id));
+    //     }
+
+    //     if (userParams.Likees)
+    //     {
+    //         var userLikees = await GetUserLikes(userParams.userId, userParams.Likers);
+    //         users = users.Where(u => userLikees.Contains(u.Id));
+    //     }
+
+    //     if (userParams.MinAge != 18 || userParams.MaxAge != 99)
+    //     {
+    //         var minDob = DateTime.Today.AddYears(-userParams.MaxAge - 1);
+    //         var maxDob = DateTime.Today.AddYears(-userParams.MinAge);
+
+    //         users = users.Where(u => u.DateOfBirth >= minDob && u.DateOfBirth <= maxDob);
+    //     }
+
+    //     if (!string.IsNullOrEmpty(userParams.OrderBy))
+    //     {
+    //         switch (userParams.OrderBy)
+    //         {
+    //             case "created":
+    //                 users = users.OrderByDescending(u => u.Created);
+    //                 break;
+    //             default:
+    //                 users.OrderByDescending(u => u.LastActive);
+    //                 break;
+    //         }
+    //     }
+
+    //     return await PagedList<User>.CreateAsync(users, userParams.PageNumber, userParams.PageSize);
+    // }
+
+    public async Task<IEnumerable<UserType>> getUserTypes()
+    {
+      return await _context.UserTypes.Where(u => u.Name != "Admin").ToListAsync();
+    }
+
+    public async Task<bool> EmailExist(string email)
+    {
+      var user = await _context.Users.FirstOrDefaultAsync(e => e.Email == email);
+      if (user != null)
+        return true;
+      return
+      false;
+    }
+
+    public async Task<bool> SendResetPasswordLink(User user, string token)
+    {
+      var template = await _context.EmailTemplates.FirstAsync(t => t.Id == resetPwdEmailId);
+      var email = await SetEmailForResetPwdLink(template.Subject, template.Body, user.Id,
+          user.LastName, user.FirstName, user.Gender, user.Email, token);
+      _context.Add(email);
+
+      if (!await SaveAll())
+        return false;
+      else
+        return true;
+    }
+
+    public async Task<Email> SetEmailForResetPwdLink(string subject, string content, int userId, string lastName,
+    string firstName, byte gender, string userEmail, string resetToken)
+    {
+      var tokens = await GetTokens();
+
+      Email newEmail = new Email();
+      newEmail.EmailTypeId = 1;
+      newEmail.ToAddress = userEmail;
+      newEmail.FromAddress = "no-reply@educnotes.com";
+      newEmail.Subject = subject;
+      List<TokenDto> tags = GetResetPwdLinkTokenValues(tokens, userId, lastName, firstName, gender, resetToken);
+      newEmail.Body = ReplaceTokens(tags, content);
+      newEmail.InsertUserId = 1;
+      newEmail.InsertDate = DateTime.Now;
+      newEmail.UpdateUserId = 1;
+      newEmail.UpdateDate = DateTime.Now;
+      newEmail.ToUserId = userId;
+
+      return newEmail;
+    }
+
+    public async Task<List<Token>> GetTokens()
+    {
+      var tokens = await _context.Tokens.OrderBy(t => t.Name).ToListAsync();
+      return tokens;
+    }
+
+    public async Task<List<Token>> GetBroadcastTokens()
+    {
+      List<Token> tokensCached = await _cache.GetTokens();
+
+      var tokens = tokensCached
+          .Where(t => t.TokenTypeId == broadcastTokenTypeId)
+          .OrderBy(t => t.Name).ToList();
+      return tokens;
+    }
+
+    public async Task<Email> SetEmailForAccountUpdated(string subject, string content, string lastName,
+      byte gender, string parentEmail, int userId)
+    {
+      List<Setting> settings = await _context.Settings.ToListAsync();
+      var schoolName = (settings.First(s => s.Name.ToLower() == "schoolname")).Value;
+      var tokens = await GetTokens();
+
+      Email newEmail = new Email();
+      newEmail.EmailTypeId = 1;
+      newEmail.ToAddress = parentEmail;
+      newEmail.FromAddress = "no-reply@educnotes.com";
+      newEmail.Subject = subject.Replace("<NOM_ECOLE>", schoolName);
+      List<TokenDto> tags = GetAccountUpdatedTokenValues(tokens, lastName, gender);
+      newEmail.Body = ReplaceTokens(tags, content);
+      newEmail.InsertUserId = 1;
+      newEmail.InsertDate = DateTime.Now;
+      newEmail.UpdateUserId = 1;
+      newEmail.UpdateDate = DateTime.Now;
+      newEmail.ToUserId = userId;
+
+      return newEmail;
+    }
+
+    public async Task<Email> SetEmailForResetPwdLink(string subject, string content, int userId, string lastName,
+      string firstName, byte gender, string userEmail, string resetToken)
+    {
+      var tokens = await GetTokens();
+
+      Email newEmail = new Email();
+      newEmail.EmailTypeId = 1;
+      newEmail.ToAddress = userEmail;
+      newEmail.FromAddress = "no-reply@educnotes.com";
+      newEmail.Subject = subject;
+      List<TokenDto> tags = GetResetPwdLinkTokenValues(tokens, userId, lastName, firstName, gender, resetToken);
+      newEmail.Body = ReplaceTokens(tags, content);
+      newEmail.InsertUserId = 1;
+      newEmail.InsertDate = DateTime.Now;
+      newEmail.UpdateUserId = 1;
+      newEmail.UpdateDate = DateTime.Now;
+      newEmail.ToUserId = userId;
+
+      return newEmail;
+    }
+
+    public List<TokenDto> GetAccountUpdatedTokenValues(IEnumerable<Token> tokens, string lastName, byte gender)
+    {
+      List<TokenDto> tokenValues = new List<TokenDto>();
+
+      foreach (var token in tokens)
+      {
+        TokenDto td = new TokenDto();
+        td.TokenString = token.TokenString;
+        switch (td.TokenString)
+        {
+          case "<N_PARENT>":
+            td.Value = lastName;
+            break;
+          case "<M_MME>":
+            td.Value = gender == 0 ? "Mme" : "M.";
+            break;
+          default:
+            break;
+        }
+
+        if(td.Value != null)
+          tokenValues.Add(td);
+      }
+
+      return tokenValues;
+    }
+
+    public List<TokenDto> GetResetPwdLinkTokenValues(IEnumerable<Token> tokens, int userId, string lastName,
+      string firstName, byte gender, string resetToken)
+    {
+      var subDomain = GetAppSubDomain();
+      List<TokenDto> tokenValues = new List<TokenDto>();
+
+      foreach (var token in tokens)
+      {
+        TokenDto td = new TokenDto();
+        td.TokenString = token.TokenString;
+        switch (td.TokenString)
+        {
+          case "<N_USER>":
+            td.Value = lastName;
+            break;
+          case "<P_USER>":
+            td.Value = firstName;
+            break;
+          case "<M_MME>":
+            td.Value = gender == 0 ? "Mme" : "M.";
+            break;
+          case "<SUBDOMAIN>":
+            td.Value = subDomain == "" ? "" : subDomain + ".";
+            break;
+          case "<CONFIRM_LINK>":
+            string url = "";
+            if (subDomain != "")
+              url = string.Format(baseUrl, subDomain + ".");
+            else
+              url = string.Format(baseUrl, "");
+            td.Value = string.Format("{0}/resetPassword?id={1}&token={2}", url, userId, HttpUtility.UrlEncode(resetToken));
+            break;
+          default:
+            break;
+        }
+
+        if(td.Value != null)
+          tokenValues.Add(td);
+      }
+
+      return tokenValues;
+    }
+
+    public async Task<List<Country>> GetCountries()
+    {
+      List<Country> countries = await _cache.GetCountries();
+      return countries;
+    }
+
+    public async Task<List<City>> GetCities()
+    {
+      List<City> cities = await _cache.GetCities();
+      return cities;
+    }
+
+    public async Task<List<District>> GetDistricts()
+    {
+      List<District> districts = await _cache.GetDistricts();
+      return districts;
+    }
+
+    public async Task<List<Zone>> GetZones()
+    {
+      List<Zone> zones = await _cache.GetZones();
+      return zones;
+    }
+
+    public async Task<IEnumerable<City>> GetAllCities()
+    {
+      return (await _context.Cities.OrderBy(c => c.Name).ToListAsync());
+    }
+
+    public async Task<IEnumerable<District>> GetAllGetDistrictsByCityIdCities(int id)
+    {
+      return (await _context.Districts.Where(c => c.CityId == id).OrderBy(c => c.Name).ToListAsync());
+    }
+
+    public void AddUserLink(int userId, int parentId)
+    {
+      var nouveau_link = new UserLink
+      {
+        UserId = userId,
+        UserPId = parentId
+      };
+      Add(nouveau_link);
+    }
+
+    // public async Task<List<string>> GetEmails()
+    // {
+    //     return await _context.Users.Where(a => a.Email != null).Select(a => a.Email).ToListAsync();
+    // }
+
+    // public async Task<List<string>> GetUserNames()
+    // {
+    //     return await _context.Users.Where(a => a.UserName != null).Select(a => a.UserName).ToListAsync();
+    // }
+
+    // public async Task sendOk(int userTypeId, int userId)
+    // {
+    //     if (userTypeId == studentTypeId)
+    //     {
+    //         // envoi de mail de l'affectation de l'eleve au professeur
+
+    //         // recuperation des emails de ses parents
+
+    //         var parents = await _context.UserLinks
+    //             .Include(c => c.UserP)
+    //             .Where(u => u.UserId == userId).Select(c => c.UserP)
+    //             .ToListAsync();
+
+    //         // récupération de nom de la classe de l'eleve
+    //         var student = await _context.Users.Include(c => c.Class)
+    //             .FirstOrDefaultAsync(u => u.Id == userId);
+
+    //         // formatage du mail
+    //         foreach (var parent in parents)
+    //         {
+    //             var emailform = new EmailFormDto
+    //             {
+    //                 toEmail = parent.Email,
+    //                 subject = "Confirmation mise en salle de votre enfant ",
+    //                 content = "<b> Bonjour " + parent.LastName + " " + parent.FirstName + "</b>, <br>" +
+    //                 "Votre enfant <b>" + student.FirstName + " " + student.FirstName +
+    //                 " </b> a bien été enregistré(s) dans la classe de <b>" + student.Class.Name
+    //             };
+    //             await SendEmail(emailform);
+    //         }
+
+    //     }
+    // }
+
+    public async Task<bool> EditUserAccount(UserAccountForEditDto user)
+    {
+      List<User> users = await _cache.GetUsers();
+      bool resultStatus = false;
+      using (var identityContextTransaction = _context.Database.BeginTransaction())
+      {
+        try
+        {
+          User appUser = users.FirstOrDefault(u => u.Id == user.Id);
+          appUser.LastName = user.LastName;
+          appUser.FirstName = user.FirstName;
+          appUser.Gender = user.Gender;
+          var dateArray = user.strDateOfBirth.Split("/");
+          int year = Convert.ToInt32(dateArray[2]);
+          int month = Convert.ToInt32(dateArray[1]);
+          int day = Convert.ToInt32(dateArray[0]);
+          DateTime birthDay = new DateTime(year, month, day);
+          appUser.DateOfBirth = birthDay;
+          appUser.SecondPhoneNumber = user.SecondPhoneNumber;
+          if (user.CityId > 0)
+            appUser.CityId = user.CityId;
+          if (user.DistrictId > 0)
+            appUser.DistrictId = user.DistrictId;
+
+          //add user photo
+          var photoFile = user.PhotoFile;
+          if (photoFile != null)
+          {
+            if (photoFile.Length > 0)
+            {
+              var uploadResult = new ImageUploadResult();
+              using (var stream = photoFile.OpenReadStream())
+              {
+                var uploadParams = new ImageUploadParams()
+                {
+                  File = new FileDescription(photoFile.Name, stream),
+                  Transformation = new Transformation().Width(500).Height(500).Crop("fill").Gravity("face")
+                };
+                var subdomain = GetAppSubDomain();
+                if (subdomain != "")
+                  uploadParams.Folder = subdomain + "/";
+                else
+                  uploadParams.Folder = "localDemo/";
+
+                uploadResult = _cloudinary.Upload(uploadParams);
+                if (uploadResult.StatusCode == HttpStatusCode.OK)
+                {
+                  Photo photo = new Photo();
+                  photo.Url = uploadResult.SecureUri.ToString();
+                  photo.PublicId = uploadResult.PublicId;
+                  photo.UserId = appUser.Id;
+                  photo.DateAdded = DateTime.Now;
+                  if (appUser.Photos.Any(u => u.IsMain))
+                  {
+                    var oldPhoto = await _context.Photos.FirstAsync(p => p.UserId == user.Id && p.IsMain == true);
+                    oldPhoto.IsMain = false;
+                    Update(oldPhoto);
+                  }
+                  photo.IsMain = true;
+                  photo.IsApproved = true;
+                  Add(photo);
+                }
+                else
+                {
+                  resultStatus = false;
+                }
+              }
+            }
+          }
+          else
+          {
+            resultStatus = true;
+          }
+
+          if (photoFile != null && await SaveAll())
+          {
+            var result = await _userManager.UpdateAsync(appUser);
+            if (result.Succeeded)
+            {
+              // fin de la transaction
+              identityContextTransaction.Commit();
+              await _cache.LoadUsers();
+              resultStatus = true;
+            }
+            else
+            {
+              identityContextTransaction.Rollback();
+              resultStatus = false;
+            }
+          }
+          else
+          {
+            var result = await _userManager.UpdateAsync(appUser);
+            if (result.Succeeded)
+            {
+              // fin de la transaction
+              identityContextTransaction.Commit();
+              await _cache.LoadUsers();
+              resultStatus = true;
+            }
+            else
+            {
+              identityContextTransaction.Rollback();
+              resultStatus = false;
+            }
+          }
+        }
+        catch
+        {
+          identityContextTransaction.Rollback();
+          return resultStatus = false;
+        }
+      }
+      return resultStatus;
+    }
+
+    public async Task<bool> AddEmployee(EmployeeForEditDto user)
+    {
+      // List<User> employees = await _cache.GetEmployees();
+      // List<UserRole> userRoles = await _cache.GetUserRoles();
+
+      // bool resultStatus = true;
+      using (var identityContextTransaction = _context.Database.BeginTransaction())
+      {
+        string publicId = "";
+        Boolean photoExists = false;
+        try
+        {
+          User appUser = new User();
+
+          var dateArray = user.strDateOfBirth.Split("/");
+          int year = Convert.ToInt32(dateArray[2]);
+          int month = Convert.ToInt32(dateArray[1]);
+          int day = Convert.ToInt32(dateArray[0]);
+          DateTime birthDay = new DateTime(year, month, day);
+
+          //is it a new user
+          if (user.Id == 0)
+          {
+            var userToSave = _mapper.Map<User>(user);
+            string strDoB = user.strDateOfBirth;
+            userToSave.DateOfBirth = birthDay;
+            var code = Guid.NewGuid();
+            userToSave.UserName = code.ToString();
+            userToSave.Validated = false;
+            userToSave.EmailConfirmed = false;
+
+            var result = await _userManager.CreateAsync(userToSave, password);
+            if (result.Succeeded)
+            {
+              appUser = await _userManager.Users.Include(i => i.Photos)
+                                                .FirstOrDefaultAsync(u => u.NormalizedUserName == userToSave.UserName.ToUpper());
+              appUser.IdNum = GetUserIDNumber(appUser.Id, appUser.LastName, appUser.FirstName);
+              await _userManager.UpdateAsync(appUser);
+            }
+          }
+          else
+          {
+            appUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            appUser.LastName = user.LastName;
+            appUser.FirstName = user.FirstName;
+            appUser.Gender = user.Gender;
+            appUser.DateOfBirth = birthDay;
+            appUser.PhoneNumber = user.PhoneNumber;
+            appUser.SecondPhoneNumber = user.SecondPhoneNumber;
+            appUser.Email = user.Email;
+            appUser.DistrictId = user.DistrictId;
+            appUser.MaritalStatusId = user.MaritalStatusId;
+            Update(appUser);
+
+            //delete previous employee roles
+            List<UserRole> prevRoles = await _context.UserRoles.Where(c => c.UserId == appUser.Id).ToListAsync();
+            DeleteAll(prevRoles);
+          }
+
+          if (user.Roles != null)
+          {
+            List<string> rolesList = user.Roles.Split(",").ToList();
+            if (rolesList.Count() > 0)
+            {
+              List<Role> roles = await _context.Roles.ToListAsync();
+              IEnumerable<string> roleNames = roles.Where(r => rolesList.Contains(r.Name)).Select(r => r.Name);
+              var result = _userManager.AddToRolesAsync(appUser, roleNames);
+              if (!result.Result.Succeeded)
+              {
+                identityContextTransaction.Rollback();
+                return false;
+              }
+            }
+          }
+
+          //add user photo
+          var photoFile = user.PhotoFile;
+          if (photoFile != null)
+          {
+            if (photoFile.Length > 0)
+            {
+              photoExists = true;
+              var uploadResult = new ImageUploadResult();
+              using (var stream = photoFile.OpenReadStream())
+              {
+                var uploadParams = new ImageUploadParams()
+                {
+                  File = new FileDescription(photoFile.Name, stream),
+                  Transformation = new Transformation().Width(500).Height(500).Crop("fill").Gravity("face")
+                };
+
+                uploadResult = _cloudinary.Upload(uploadParams);
+                if (uploadResult.StatusCode == HttpStatusCode.OK)
+                {
+                  publicId = uploadResult.PublicId;
+
+                  Photo photo = new Photo();
+                  photo.UserId = appUser.Id;
+                  photo.Url = uploadResult.SecureUri.ToString();
+                  photo.PublicId = uploadResult.PublicId;
+                  photo.DateAdded = DateTime.Now;
+                  if (appUser.Photos.Any(u => u.IsMain))
+                  {
+                    var oldPhoto = await _context.Photos.FirstAsync(p => p.UserId == appUser.Id && p.IsMain == true);
+                    oldPhoto.IsMain = false;
+                    Update(oldPhoto);
+                  }
+                  photo.IsMain = true;
+                  photo.IsApproved = true;
+                  Add(photo);
+                }
+                // else
+                // {
+                //   identityContextTransaction.Rollback();
+                //   return false;
+                // }
+              }
+            }
+          }
+
+          // send the mail to update userName/pwd - add to Email table
+          if (appUser.Email != null)
+          {
+            ConfirmEmployeeEmailDto emailData = new ConfirmEmployeeEmailDto()
+            {
+              Id = appUser.Id,
+              LastName = appUser.LastName,
+              FirstName = appUser.FirstName,
+              Cell = appUser.PhoneNumber,
+              Gender = appUser.Gender,
+              Email = appUser.Email,
+              Token = await _userManager.GenerateEmailConfirmationTokenAsync(appUser)
+            };
+
+            List<EmailTemplate> emailTemplates = await _cache.GetEmailTemplates();
+            var template = emailTemplates.First(t => t.Id == employeeConfirmEmailId);
+            Email emailToSend = await SetDataForConfirmEmployeeEmail(emailData, template.Body, template.Subject);
+            Add(emailToSend);
+          }
+
+          await SaveAll();
+          identityContextTransaction.Commit();
+          return true;
+        }
+        catch (Exception ex)
+        {
+          var dd = ex.Message;
+          identityContextTransaction.Rollback();
+          if(photoExists)
+            DeletePhotoFromCloudinary(publicId);
+          return false;
+        }
+        finally
+        {
+          await _cache.LoadUsers();
+          await _cache.LoadUserRoles();
+          await _cache.LoadPhotos();
+        }
+      }
+    }
+
+    public async Task<EmailTemplate> GetEmailTemplate(int id)
+    {
+      List<EmailTemplate> templates = await _cache.GetEmailTemplates();
+      return templates.FirstOrDefault(s => s.Id == id);
+    }
+
+    public async Task<SmsTemplate> GetSmsTemplate(int id)
+    {
+      List<SmsTemplate> templates = await _context.SmsTemplates.ToListAsync();
+      return templates.FirstOrDefault(s => s.Id == id);
+    }
+
+    public async Task<Order> GetOrder(int id)
+    {
+      List<Order> orders = await _cache.GetOrders();
+      List<OrderLine> lines = await _cache.GetOrderLines();
+
+      var order = orders.FirstOrDefault(o => o.Id == id);
+      order.Lines = lines.Where(o => o.OrderId == order.Id).ToList();
+
+      return order;
+    }
+
+    public string GetUserIDNumber(int userId, string lastName, string firstName)
+    {
+      int randomVal = 300631;
+      int val = userId * 2 + randomVal;
+      // string idNum = lastName.Substring(0, 1).ToUpper() + firstName.Substring(0,1).ToUpper() + val.ToString().To5Digits();
+      string idNum = val.ToString().To5Digits();
+      return idNum;
+    }
+
+    public async Task<IEnumerable<PaymentType>> GetPaymentTypes()
+    {
+      List<PaymentType> paymentTypesCached = await _cache.GetPaymentTypes();
+      var types = paymentTypesCached.ToList();
+      return types;
+    }
+
+    public async Task<IEnumerable<Bank>> GetBanks()
+    {
+      List<Bank> banks = await _cache.GetBanks();
+      return banks;
+    }
+
+    public string ReplaceTokens(List<TokenDto> tokens, string content)
+    {
+      foreach (var token in tokens)
+      {
+        content = content.Replace(token.TokenString, token.Value);
+      }
+      return content;
+    }
+
+    public async Task<List<Token>> GetTokens()
+    {
+      var tokens = await _context.Tokens.OrderBy(t => t.Name).ToListAsync();
+      return tokens;
+    }
+
+    public async Task<List<Token>> GetBroadcastTokens()
+    {
+      List<Token> tokensCached = await _cache.GetTokens();
+
+      var tokens = tokensCached
+        .Where(t => t.TokenTypeId == broadcastTokenTypeId)
+        .OrderBy(t => t.Name).ToList();
+      return tokens;
+    }
+
+    public async Task<List<Product>> GetActiveProducts()
+    {
+      List<Product> productsCached = await _cache.GetProducts();
+      var products = productsCached.Where(p => p.Active)
+                                   .OrderBy(o => o.DsplSeq).ThenBy(p => p.Name)
+                                   .ToList();
+      return products;
+    }
+
+    public async Task<IEnumerable<Setting>> GetSettings()
+    {
+      var settings = await _cache.GetSettings();
+      return settings;
+    }
+
+    public MsgRecipientsDto setRecipientsList(List<User> users, int msgChoice, Boolean sendToNotValidated)
+    {
+      MsgRecipientsDto recipients = new MsgRecipientsDto();
+      recipients.UsersOK = new List<User>();
+      recipients.UsersNOK = new List<User>();
+      foreach (var user in users)
+      {
+        if (msgChoice == 1) //email
+        {
+          if (!string.IsNullOrEmpty(user.Email) && (user.EmailConfirmed || sendToNotValidated))
+          {
+            recipients.UsersOK.Add(user);
+          }
+          else
+          {
+            recipients.UsersNOK.Add(user);
+          }
+        }
+        else //sms
+        {
+          if (!string.IsNullOrEmpty(user.PhoneNumber) && (user.PhoneNumberConfirmed || sendToNotValidated))
+          {
+            recipients.UsersOK.Add(user);
+          }
+          else
+          {
+            recipients.UsersNOK.Add(user);
+          }
+        }
+      }
+
+      return recipients;
+    }
+    public async Task<UserWithRolesDto> GetUserWithRoles(int userId)
+    {
+      User user = await _context.Users.Include(i => i.Photos).FirstAsync(u => u.Id == userId);
+      UserWithRolesDto userWithRoles = new UserWithRolesDto();
+      userWithRoles.Id = user.Id;
+      userWithRoles.LastName = user.LastName;
+      userWithRoles.FirstName = user.FirstName;
+      Photo photo = user.Photos.FirstOrDefault(p => p.IsMain == true);
+      if (photo != null)
+        userWithRoles.PhotoUrl = photo.Url;
+      List<UserRole> rolesFromDB = await _context.UserRoles.Include(i => i.Role)
+                                                           .Where(r => r.UserId == user.Id)
+                                                           .ToListAsync();
+      List<Role> roles = rolesFromDB.Select(s => s.Role).ToList();
+      userWithRoles.Roles = roles;
+
+      return userWithRoles;
+    }
+
+    public async Task<List<MenuItemDto>> GetMenu(int userTypeId)
+    {
+      List<Menu> menus = await _cache.GetMenus();
+      List<MenuItem> menuItemsCached = await _cache.GetMenuItems();
+
+      //get userType menu
+      Menu menu = menus.First(m => m.UserTypeId == userTypeId);
+      List<MenuItem> menuItemsByMenuId = menuItemsCached.Where(m => m.MenuId == menu.Id).ToList();
+      List<MenuItemDto> userMenuItems = _mapper.Map<List<MenuItemDto>>(menuItemsByMenuId);
+
+      List<MenuItemDto> menuItems = new List<MenuItemDto>();
+      foreach (var menuItem in userMenuItems)
+      {
+        //check if the menu already exists in this object
+        Boolean menuExists = menuItems.FirstOrDefault(m => m.Id == menuItem.Id) != null;
+        if (menuExists == false)
+        {
+          //doesn't exist so now check if this is a top level item
+          if (menuItem.ParentMenuId == null)
+          {
+            //top level item so just add it
+            menuItems.Add(menuItem);
+          }
+          else
+          {
+            //get the parent menu item from this object if it exists
+            MenuItemDto parent = menuItems.FirstOrDefault(m => m.Id == Convert.ToInt32(menuItem.ParentMenuId));
+            if (parent == null)
+            {
+              //if it gets here then the parent isn't in the list yet. find the parent in the list
+              MenuItemDto newParentMenuItem = FindOrLoadParent(userMenuItems, menuItems, Convert.ToInt32(menuItem.ParentMenuId));
+
+              //add the current child menu item to the newly added parent
+              newParentMenuItem.ChildMenuItems.Add(menuItem);
+              menuItems.Add(newParentMenuItem);
+            }
+            else
+            {
+              //parent already existed in this object. add this menu to the child of the parent
+              parent.ChildMenuItems.Add(menuItem);
+            }
+          }
+        }
+      }
+
+      return menuItems;
+    }
+
+    public async Task<List<MenuItemDto>> GetUserTypeMenu(int userTypeId, int userId)
+    {
+      List<Menu> menus = await _cache.GetMenus();
+      List<MenuItem> menuItemsCached = await _cache.GetMenuItems();
+      List<UserRole> userRolesCached = await _cache.GetUserRoles();
+      List<RoleCapability> roleCapabilities = await _cache.GetRoleCapabilities();
+
+      //get userType menu
+      Menu menu = menus.First(m => m.UserTypeId == userTypeId);
+      List<MenuItem> menuItemsByMenuId = menuItemsCached.Where(m => m.MenuId == menu.Id).ToList();
+      List<MenuItemDto> userMenuItems = _mapper.Map<List<MenuItemDto>>(menuItemsByMenuId);
+      List<UserRole> userRolesFromDB = userRolesCached.Where(r => r.UserId == userId).ToList();
+      List<Role> userRoles = userRolesFromDB.Select(u => u.Role).ToList();
+      List<RoleCapability> capabilities = roleCapabilities.ToList();
+
+      List<MenuItemDto> menuItems = new List<MenuItemDto>();
+      foreach (var menuItem in userMenuItems)
+      {
+        Boolean hasAccessToMenuItem = await HasAccessToMenu(userId, menuItem, userRoles, userMenuItems, capabilities);
+        if (hasAccessToMenuItem)
+        {
+          //check if the menu already exists in this object
+          Boolean menuExists = menuItems.FirstOrDefault(m => m.Id == menuItem.Id) != null;
+          if (menuExists == false)
+          {
+            //doesn't exist so now check if this is a top level item
+            if (menuItem.ParentMenuId == null)
+            {
+              //top level item so just add it
+              menuItems.Add(menuItem);
+            }
+            else
+            {
+              //get the parent menu item from this object if it exists
+              MenuItemDto parent = menuItems.FirstOrDefault(m => m.Id == Convert.ToInt32(menuItem.ParentMenuId));
+              if (parent == null)
+              {
+                //if it gets here then the parent isn't in the list yet. find the parent in the list
+                MenuItemDto newParentMenuItem = FindOrLoadParent(userMenuItems, menuItems, Convert.ToInt32(menuItem.ParentMenuId));
+
+                //add the current child menu item to the newly added parent
+                newParentMenuItem.ChildMenuItems.Add(menuItem);
+                menuItems.Add(newParentMenuItem);
+              }
+              else
+              {
+                //parent already existed in this object. add this menu to the child of the parent
+                parent.ChildMenuItems.Add(menuItem);
+              }
+            }
+          }
+        }
+      }
+
+      return menuItems;
+    }
+
+    public async Task<Boolean> HasAccessToMenu(int userId, MenuItemDto menuItem, List<Role> userRoles, List<MenuItemDto> menuItems, List<RoleCapability> capabilities)
+    {
+      if (menuItem.IsAlwaysEnabled)
+      {
+        return true;
+      }
+      else
+      {
+        //Loop through all the roles this user is in. The first time the user has
+        //access to the menu item return true. If you get through all the
+        //roles then the user does not have access to this menu item.
+        foreach (Role role in userRoles)
+        {
+          //check if the user is in this role
+          // Boolean userInRole = await UserInRole(userId, role.Id);
+          // if(userInRole)
+          // {
+          // }
+          //try to find the capability with the menu item id
+          List<RoleCapability> capabilitiesList = capabilities.Where(r => r.Capability.MenuItemId == menuItem.Id && r.RoleId == role.Id)
+                                                              .ToList();
+          foreach (RoleCapability capability in capabilitiesList)
+          {
+            if ((capability != null) && (capability.AccessFlag != (byte)Enums.CapabilityAccessFlag.None))
+            {
+              //If the record is in the table and the user has access other
+              //then None then return true.
+              return true;
+            }
+          }
+        }
+      }
+
+      //If it gets here then the user didn’t have access to this menu item. BUT they
+      //may have access to one of its children, now check the children and if they
+      //have access to any of them return true.
+      List<MenuItemDto> menuChildItems = menuItems.Where(m => m.ParentMenuId == menuItem.Id).ToList();
+      if (menuChildItems.Count > 0)
+      {
+        foreach (MenuItemDto child in menuChildItems)
+        {
+          Boolean childInRole = await HasAccessToMenu(userId, child, userRoles, menuItems, capabilities);
+          if (childInRole)
+          {
+            return true;
+          }
+        }
+      }
+
+      //if it never found a role with any capability then return false.
+      return false;
+    }
+
+    public async Task<List<MenuCapabilitiesDto>> GetMenuCapabilities(int userTypeId, int userId)
+    {
+      List<Capability> capabilities = await _cache.GetCapabilities();
+      List<MenuItem> menuItemsCached = await _cache.GetMenuItems();
+      List<MenuItemDto> menuItems = await GetMenu(userTypeId);
+
+      List<MenuCapabilitiesDto> menuCapabilities = new List<MenuCapabilitiesDto>();
+      foreach (MenuItemDto menuItem in menuItems)
+      {
+        MenuCapabilitiesDto item = new MenuCapabilitiesDto();
+        item.MenuItemId = menuItem.Id;
+        item.MenuItemName = menuItem.DisplayName;
+        List<Capability> itemCapabilities = capabilities.Where(c => c.MenuItemId == menuItem.Id).ToList();
+        item.Capabilities = itemCapabilities;
+        menuCapabilities.Add(item);
+
+        if (menuItem.ChildMenuItems.Count() > 0)
+        {
+          foreach (MenuItemDto child in menuItem.ChildMenuItems)
+          {
+            MenuCapabilitiesDto childItem = new MenuCapabilitiesDto();
+            childItem.MenuItemId = child.Id;
+            childItem.MenuItemName = child.DisplayName;
+            List<Capability> childItemCapabilities = capabilities.Where(c => c.MenuItemId == child.Id).ToList();
+            childItem.Capabilities = childItemCapabilities;
+            item.ChildMenuItems.Add(childItem);
+          }
+        }
+      }
+
+      return menuCapabilities;
+    }
+
+    public async Task<ErrorDto> SaveRole(RoleDto roleDto)
+    {
+      DateTime today = DateTime.Now;
+
+      using(var identityContextTransaction = _context.Database.BeginTransaction())
+      {
+        ErrorDto status = new ErrorDto();
+        status.NoError = true;
+        try
+        {
+          Role role = new Role();
+          role.Id = roleDto.RoleId;
+          role.Name = roleDto.RoleName;
+
+          //is it a new role?
+          if (role.Id == 0)
+          {
+            var result = await _roleManager.CreateAsync(role);
+          }
+          else
+          {
+            List<Role> roles = await _cache.GetRoles();
+            List<RoleCapability> roleCapabilities = await _cache.GetRoleCapabilities();
+            List<UserRole> userRoles = await _cache.GetUserRoles();
+
+            role = roles.First(r => r.Id == roleDto.RoleId);
+            role.Name = roleDto.RoleName;
+            role.NormalizedName = roleDto.RoleName.ToUpper();
+            // role.ConcurrencyStamp =  Guid.NewGuid().ToString();
+            Update(role);
+
+            //remove previous role capabilities
+            List<RoleCapability> prevRoleCapabilities = roleCapabilities.Where(r => r.RoleId == role.Id).ToList();
+            DeleteAll(prevRoleCapabilities);
+
+            //remove previous users in the role
+            List<UserRole> prevUsersInRole = userRoles.Where(r => r.RoleId == role.Id).ToList();
+            DeleteAll(prevUsersInRole);
+          }
+
+          //add role capabilities
+          foreach (RoleCapabilityDto capability in roleDto.Capabilities)
+          {
+            if (capability.AccessFlag > 0)
+            {
+              RoleCapability rc = new RoleCapability();
+              rc.RoleId = role.Id;
+              rc.CapabilityId = capability.CapabilityId;
+              rc.AccessFlag = capability.AccessFlag;
+              rc.InsertUserId = 1;
+              rc.InsertDate = today;
+              rc.UpdateUserId = 1;
+              rc.UpdateDate = today;
+              Add(rc);
+            }
+          }
+
+          foreach (UserInRoleDto user in roleDto.UsersInRole)
+          {
+            UserRole userRole = new UserRole();
+            userRole.UserId = user.Id;
+            userRole.RoleId = role.Id;
+            Add(userRole);
+          }
+
+          await SaveAll();
+          identityContextTransaction.Commit();
+          return status;
+        }
+        catch (Exception ex)
+        {
+          var de = ex.Message;
+          identityContextTransaction.Rollback();
+          status.Message = ex.Message;
+          status.NoError = false;
+          return status;
+        }
+        finally
+        {
+          await _cache.LoadRoles();
+          await _cache.LoadRoleCapabilities();
+          await _cache.LoadUserRoles();
+        }
+      }
+    }
+
+    public async Task<List<FinOpDto>> GetOrderPayments(int orderId)
+    {
+      List<FinOp> finOps = await _cache.GetFinOps();
+      var paymentsFromDB = finOps.Where(f => f.OrderId == orderId).ToList();
+      var payments = _mapper.Map<List<FinOpDto>>(paymentsFromDB);
+      return payments;
+    }
+
+    public async Task<List<OrderLine>> GetOrderLines(int orderId)
+    {
+      List<OrderLine> linesCached = await _cache.GetOrderLines();
+      var lines = linesCached.Where(ol => ol.OrderId == orderId).ToList();
+      return lines;
+    }
+
+    public string GetInvoiceNumber(int invoiceId)
+    {
+      var today = DateTime.Now;
+      string year = today.Year.ToString().Substring(2);
+      var todaymonth = today.Month;
+      string month = todaymonth.ToString().Length == 1 ? "0" + todaymonth : todaymonth.ToString();
+      var todayday = today.Day;
+      string day = todayday.ToString().Length == 1 ? "0" + todayday : todayday.ToString();
+
+      var num = year + month + day + "-" + invoiceId.ToString();
+      return num;
+    }
+
+    public async Task<User> GetUserByEmailAndLogin(string username, string email)
+    {
+      List<User> users = await _cache.GetUsers();
+      return users.FirstOrDefault(u => u.Email.ToUpper() == email.ToUpper() &&
+        u.UserName.ToUpper() == username.ToUpper());
+    }
+
+  }
 }

@@ -54,53 +54,70 @@ namespace SmokeEnGrill.API.Data
                 //                context.SaveChanges();
 
                 var payments = new List<PaymentType>{
-                    new PaymentType{Name="Cash"},
-                    new PaymentType{Name="Chèque"},
-                    new PaymentType{Name="Carte VISA"}
+                    new PaymentType { Name = "espèce" },
+                    new PaymentType { Name = "mobile money"},
+                    new PaymentType { Name = "chèque"}
                 };
                 context.AddRange(payments);
 
-
-                var methods = new List<DeliveryMethod>{
-                    new DeliveryMethod{Name="A domicile"},
-                    new DeliveryMethod{Name="Sur site"},
-                    new DeliveryMethod{Name="Sur place"}
+                var methods = new List<DeliveryMethod> {
+                    new DeliveryMethod{ Name= "à emporter" },
+                    new DeliveryMethod { Name = "livraison"},
+                    new DeliveryMethod { Name = "sur place"}
                 };
                 context.AddRange(methods);
 
                 var ordertypes = new List<OrderType>{
-                    new OrderType{Name="OrderType1"},
-                    new OrderType{Name="OrderType2"}
+                    new OrderType { Name = "vente" },
+                    new OrderType { Name = "achat" }
                 };
                 context.AddRange(ordertypes);
 
-                var countries = new List<Country>{
-                    new Country{Name="pays1"},
-                    new Country{Name="pays2"}
+                var countries = new List<Country> {
+                    new Country { Name = "Côte d'Ivore" },
                 };
                 context.AddRange(countries);
-                
 
-                var cities = new List<City>{
-                    new City{Name="ville1"},
-                    new City{Name="Ville2"}
+
+                // var cities = new List<City> {
+                //     new City { Name="ville1" },
+                //     new City{ Name="Ville2" }
+                // };
+                // context.AddRange(cities);
+
+
+                //  var districts = new List<District>{
+                //     new District{Name="district1"},
+                //     new District{Name="district2"}
+                // };
+                // context.AddRange(districts);
+
+                var storetypes = new List<StoreType> {
+                    new StoreType {Name = "Magasin"},
+                    new StoreType {Name = "employé"}
                 };
-                context.AddRange(cities);
+                context.AddRange(storetypes);
 
-
-                 var districts = new List<District>{
-                    new District{Name="district1"},
-                    new District{Name="district2"}
+                var stores = new List<Store> {
+                new Store { Name = "magasin principal", StoreTypeId = 1 },
                 };
-                context.AddRange(districts);
+                context.AddRange(stores);
 
+                var inventOptypes = new List<InventOpType>() {
+                    new InventOpType { Name = "entrée Stock" },
+                    new InventOpType { Name = "sortie Stock" },
+                    new InventOpType { Name = "transfert Stock" },
+                    new InventOpType { Name = "inventaire" }
+                };
+                context.AddRange(inventOptypes);
 
                 var roles = new List<Role> {
-                    new Role { Name = "Supervisor" },
-                    new Role { Name = "Operateur" },
+                    new Role { Name = "gérant" },
+                    new Role { Name = "employé" },
+                    new Role {Name = "livreur"},
+                    new Role {Name = "fournisseur"},
                     new Role { Name = "Admin" },
                     new Role { Name = "SuperAdmin" }
-
                 };
 
                 foreach (var role in roles)
@@ -114,8 +131,7 @@ namespace SmokeEnGrill.API.Data
                     FirstName = "admin",
                     LastName = "admin",
                     Email = "adminUser@SmokeEnGrill.com",
-                    EmailConfirmed = true,
-                    ValidatedCode = true
+                    EmailConfirmed = true
                 };
 
                 IdentityResult result = userManager.CreateAsync(adminUser, "password").Result;
@@ -125,33 +141,6 @@ namespace SmokeEnGrill.API.Data
                     var admin = userManager.FindByNameAsync("Admin").Result;
                     userManager.AddToRolesAsync(admin, new[] { "Admin", "SuperAdmin" }).Wait();
                 }
-
-
-                var storetypes = new List<StoreType> {
-                    new StoreType {Name = "Magasin"},
-                    new StoreType {Name = "Client"},
-                    new StoreType {Name = "Personnel"}
-                };
-                context.AddRange(storetypes);
-
-                var stores = new List<Store> {
-                new Store {Name = "MAIN STORE", StoreTypeId=1},
-
-                };
-                context.AddRange(stores);
-
-                var inventOptypes = new List<InventOpType>() {
-                    new InventOpType{Name ="Entrée Stock"},
-                    new InventOpType{Name ="Transfert Stock"},
-                    new InventOpType{Name ="Affectation Tablette"},
-                    new InventOpType{Name ="Echange Tablette"},
-                    new InventOpType{Name ="Panne"},
-                    new InventOpType{Name ="Export"},
-                    new InventOpType{Name ="En Réparation"},
-                    new InventOpType{Name ="Retour Réparation"},
-                    new InventOpType{Name ="Maintenance"}
-                };
-                context.AddRange(inventOptypes);
 
                 context.SaveChanges();
             }

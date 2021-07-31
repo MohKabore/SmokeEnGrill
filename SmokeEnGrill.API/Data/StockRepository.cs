@@ -70,7 +70,7 @@ namespace SmokeEnGrill.API.Data
                         {
                             ProductId = prod.ProductId,
                             Qty = prod.Qty,
-                            PendingQty = prod.PendingQty
+                            PendingQty = prod.PendingOrdersQty
                         }
                     );
                 }
