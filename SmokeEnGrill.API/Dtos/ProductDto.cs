@@ -15,8 +15,5 @@ namespace EducNotes.API.Dtos
         public int? PeriodicityId { get; set; }
         public int? deadLineCount { get; set; }
         public decimal? Price { get; set; }
-        public List<ProdDeadLineDto> Deadlines {get; set;}
-
-        public List<LevelProdDto> Levels { get; set; }
     }
 }

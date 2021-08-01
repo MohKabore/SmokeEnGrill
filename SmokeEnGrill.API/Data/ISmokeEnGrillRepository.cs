@@ -37,9 +37,7 @@ namespace SmokeEnGrill.API.Data
     Task<User> GetUserByEmail(string email);
     Task<EmailTemplate> GetEmailTemplate(int id);
     Task<SmsTemplate> GetSmsTemplate(int id);
-    Task sendOk(int userTypeId, int userId);
     Task<IEnumerable<Setting>> GetSettings();
-    Task<IEnumerable<Email>> SetEmailDataForRegistration(IEnumerable<RegistrationEmailDto> emailData, string content, string RegDeadLine);
     Task<Order> GetOrder(int id);
     Task<Email> SetEmailForAccountUpdated(string subject, string content, string lastName, byte gender, string parentEmail, int userId);
     string GetUserIDNumber(int userId, string lastName, string firstName);
@@ -50,7 +48,6 @@ namespace SmokeEnGrill.API.Data
     Task<List<OrderLine>> GetOrderLines(int orderId);
     Task<List<Product>> GetActiveProducts();
     Task<User> GetUserByEmailAndLogin(string username, string email);
-    Task<Boolean> SendTeacherConfirmEmail(int userId);
     Task<List<Token>> GetTokens();
     string ReplaceTokens(List<TokenDto> tokens, string content);
     List<TokenDto> GetMessageTokenValues(List<Token> tokens, UserToSendMsgDto user);
@@ -60,6 +57,7 @@ namespace SmokeEnGrill.API.Data
     Task<UserWithRolesDto> GetUserWithRoles(int userId);
     Task<List<MenuItemDto>> GetUserTypeMenu(int userTypeId, int userId);
     Task<List<MenuCapabilitiesDto>> GetMenuCapabilities(int userTypeId, int userId);
+    Task<bool> SendResetPasswordLink(User user, string token);
     Task<ErrorDto> SaveRole(RoleDto user);
     Task<List<District>> GetDistricts();
     Task<List<City>> GetCities();

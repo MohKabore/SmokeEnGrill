@@ -413,13 +413,6 @@ namespace SmokeEnGrill.API.Controllers
       return Ok(infos);
     }
 
-    [HttpGet("{userId}/TeacherConfirmEmail")]
-    public async Task<IActionResult> SendTeacherConfirmEmail(int userId)
-    {
-      Boolean emailSent = await _repo.SendTeacherConfirmEmail(userId);
-      return Ok(emailSent);
-    }
-
     // [HttpPost("AddFile")]
     // public async Task<IActionResult> AddFile([FromForm]PhotoForCreationDto photoForCreationDto)
     // {

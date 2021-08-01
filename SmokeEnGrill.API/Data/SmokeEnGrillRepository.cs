@@ -14,6 +14,12 @@ using EducNotes.API.data;
 using System.Globalization;
 using SmokeEnGrill.API.Helpers;
 using EducNotes.API.Models;
+using System.Web;
+using CloudinaryDotNet;
+using Microsoft.Extensions.Options;
+using CloudinaryDotNet.Actions;
+using System.Net;
+using EducNotes.API.Helpers;
 
 namespace SmokeEnGrill.API.Data
 {
@@ -25,6 +31,8 @@ namespace SmokeEnGrill.API.Data
     private readonly IMapper _mapper;
     private readonly UserManager<User> _userManager;
     public readonly RoleManager<Role> _roleManager;
+    private Cloudinary _cloudinary;
+    private readonly IOptions<CloudinarySettings> _cloudinaryConfig;
     string password;
     int teacherTypeId, parentTypeId, studentTypeId, adminTypeId;
     int parentRoleId, memberRoleId, moderatorRoleId, adminRoleId, teacherRoleId;
@@ -36,10 +44,11 @@ namespace SmokeEnGrill.API.Data
 
     public SmokeEnGrillRepository(DataContext context, IConfiguration config, IEmailSender emailSender,
         UserManager<User> userManager, IMapper mapper, IHttpContextAccessor httpContext,
-        RoleManager<Role> roleManager, ICacheRepository cache)
+        RoleManager<Role> roleManager, ICacheRepository cache, IOptions<CloudinarySettings> cloudinaryConfig)
     {
       _userManager = userManager;
       _roleManager = roleManager;
+      _cloudinaryConfig = cloudinaryConfig;
       _cache = cache;
       _context = context;
       _httpContext = httpContext;
@@ -56,6 +65,14 @@ namespace SmokeEnGrill.API.Data
       resetPwdEmailId = _config.GetValue<int>("AppSettings:resetPwdEmailId");
       updateAccountEmailId = _config.GetValue<int>("AppSettings:updateAccountEmailId");
       broadcastTokenTypeId = _config.GetValue<int>("AppSettings:broadcastTokenTypeId");
+
+      _cloudinaryConfig = cloudinaryConfig;
+      Account acc = new Account(
+        _cloudinaryConfig.Value.CloudName,
+        _cloudinaryConfig.Value.ApiKey,
+        _cloudinaryConfig.Value.ApiSecret
+      );
+      _cloudinary = new Cloudinary(acc);
     }
 
     public void Add<T>(T entity) where T : class
@@ -278,6 +295,13 @@ namespace SmokeEnGrill.API.Data
       return await _context.UserTypes.Where(u => u.Name != "Admin").ToListAsync();
     }
 
+    public async Task<Boolean> UserInRole(int userId, int roleId)
+    {
+      List<UserRole> userRolesCached = await _cache.GetUserRoles();
+      UserRole userRole = userRolesCached.FirstOrDefault(u => u.UserId == userId && u.RoleId == roleId);
+      return (userRolesCached != null);
+    }
+
     public async Task<bool> EmailExist(string email)
     {
       var user = await _context.Users.FirstOrDefaultAsync(e => e.Email == email);
@@ -323,7 +347,7 @@ namespace SmokeEnGrill.API.Data
 
     public async Task<List<Token>> GetTokens()
     {
-      var tokens = await _context.Tokens.OrderBy(t => t.Name).ToListAsync();
+      var tokens = await _cache.GetTokens();
       return tokens;
     }
 
@@ -350,27 +374,6 @@ namespace SmokeEnGrill.API.Data
       newEmail.FromAddress = "no-reply@educnotes.com";
       newEmail.Subject = subject.Replace("<NOM_ECOLE>", schoolName);
       List<TokenDto> tags = GetAccountUpdatedTokenValues(tokens, lastName, gender);
-      newEmail.Body = ReplaceTokens(tags, content);
-      newEmail.InsertUserId = 1;
-      newEmail.InsertDate = DateTime.Now;
-      newEmail.UpdateUserId = 1;
-      newEmail.UpdateDate = DateTime.Now;
-      newEmail.ToUserId = userId;
-
-      return newEmail;
-    }
-
-    public async Task<Email> SetEmailForResetPwdLink(string subject, string content, int userId, string lastName,
-      string firstName, byte gender, string userEmail, string resetToken)
-    {
-      var tokens = await GetTokens();
-
-      Email newEmail = new Email();
-      newEmail.EmailTypeId = 1;
-      newEmail.ToAddress = userEmail;
-      newEmail.FromAddress = "no-reply@educnotes.com";
-      newEmail.Subject = subject;
-      List<TokenDto> tags = GetResetPwdLinkTokenValues(tokens, userId, lastName, firstName, gender, resetToken);
       newEmail.Body = ReplaceTokens(tags, content);
       newEmail.InsertUserId = 1;
       newEmail.InsertDate = DateTime.Now;
@@ -473,6 +476,100 @@ namespace SmokeEnGrill.API.Data
     {
       List<Zone> zones = await _cache.GetZones();
       return zones;
+    }
+
+    public List<TokenDto> GetMessageTokenValues(List<Token> tokens, UserToSendMsgDto user)
+    {
+      List<TokenDto> tokenValues = new List<TokenDto>();
+
+      foreach(var token in tokens)
+      {
+        TokenDto td = new TokenDto();
+        td.TokenString = token.TokenString;
+
+        switch (td.TokenString)
+        {
+          case "#N_UTILISATEUR#":
+            td.Value = user.LastName.FirstLetterToUpper();
+            break;
+          case "#P_UTILISATEUR#":
+            td.Value = user.FirstName.FirstLetterToUpper();
+            break;
+          case "#M_MME#":
+            td.Value = user.Gender == 0 ? "Mme" : "M.";
+            break;
+          case "#CELL_UTILISATEUR#":
+            td.Value = user.Mobile;
+            break;
+          case "#EMAIL_UTILISATEUR#":
+            td.Value = user.Email;
+            break;
+          case "#TOKEN#":
+            td.Value = user.Token;
+            break;
+          default:
+            break;
+        }
+
+        if(td.Value != null)
+          tokenValues.Add(td);
+      }
+
+      return tokenValues;
+    }
+
+    public List<TokenDto> GetEmployeeEmailTokenValues(List<Token> tokens, ConfirmEmployeeEmailDto emailData)
+    {
+      List<TokenDto> tokenValues = new List<TokenDto>();
+
+      foreach (var token in tokens)
+      {
+        TokenDto td = new TokenDto();
+        td.TokenString = token.TokenString;
+        var subDomain = GetAppSubDomain();
+        string teacherId = emailData.Id.ToString();
+
+        switch (td.TokenString)
+        {
+          case "<N_USER>":
+            td.Value = emailData.LastName.FirstLetterToUpper();
+            break;
+          case "<P_USER>":
+            td.Value = emailData.FirstName.FirstLetterToUpper();
+            break;
+          case "<M_MME>":
+            td.Value = emailData.Gender == 0 ? "Mme" : "M.";
+            break;
+          case "<CELL_USER>":
+            td.Value = emailData.Cell;
+            break;
+          case "<EMAIL_USER>":
+            td.Value = emailData.Email;
+            break;
+          case "<TOKEN>":
+            td.Value = emailData.Token;
+            break;
+          case "<ROLE>":
+            td.Value = emailData.Role;
+            break;
+          case "<CONFIRM_LINK>":
+            string url = "";
+            if (subDomain != "")
+              url = string.Format(baseUrl, subDomain + ".");
+            else
+              url = string.Format(baseUrl, "");
+            td.Value = string.Format("{0}/confirmUserEmail?id={1}&token={2}", url,
+              teacherId, HttpUtility.UrlEncode(emailData.Token));
+            break;
+          default:
+            break;
+        }
+
+        if(td.Value != null)
+          tokenValues.Add(td);
+      }
+
+      return tokenValues;
     }
 
     public async Task<IEnumerable<City>> GetAllCities()
@@ -657,8 +754,8 @@ namespace SmokeEnGrill.API.Data
 
     public async Task<bool> AddEmployee(EmployeeForEditDto user)
     {
-      // List<User> employees = await _cache.GetEmployees();
-      // List<UserRole> userRoles = await _cache.GetUserRoles();
+      List<User> employees = await _cache.GetEmployees();
+      List<UserRole> userRoles = await _cache.GetUserRoles();
 
       // bool resultStatus = true;
       using (var identityContextTransaction = _context.Database.BeginTransaction())
@@ -697,7 +794,7 @@ namespace SmokeEnGrill.API.Data
           }
           else
           {
-            appUser = await _context.Users.FirstOrDefaultAsync(u => u.Id == user.Id);
+            appUser = employees.First(u => u.Id == user.Id);
             appUser.LastName = user.LastName;
             appUser.FirstName = user.FirstName;
             appUser.Gender = user.Gender;
@@ -706,11 +803,10 @@ namespace SmokeEnGrill.API.Data
             appUser.SecondPhoneNumber = user.SecondPhoneNumber;
             appUser.Email = user.Email;
             appUser.DistrictId = user.DistrictId;
-            appUser.MaritalStatusId = user.MaritalStatusId;
             Update(appUser);
 
             //delete previous employee roles
-            List<UserRole> prevRoles = await _context.UserRoles.Where(c => c.UserId == appUser.Id).ToListAsync();
+            List<UserRole> prevRoles = userRoles.Where(c => c.UserId == appUser.Id).ToList();
             DeleteAll(prevRoles);
           }
 
@@ -816,6 +912,28 @@ namespace SmokeEnGrill.API.Data
       }
     }
 
+    public async Task<Email> SetDataForConfirmEmployeeEmail(ConfirmEmployeeEmailDto emailData, string content, string subject)
+    {
+      List<Setting> settings = await _cache.GetSettings();
+
+      var tokens = await GetTokens();
+      var schoolName = settings.First(s => s.Name == "SchoolName").Value;
+      Email newEmail = new Email();
+      newEmail.EmailTypeId = 1;
+      newEmail.ToAddress = emailData.Email;
+      newEmail.FromAddress = "no-reply@educnotes.com";
+      newEmail.Subject = subject.Replace("<NOM_ECOLE>", schoolName);
+      List<TokenDto> tags = GetEmployeeEmailTokenValues(tokens, emailData);
+      newEmail.Body = ReplaceTokens(tags, content);
+      newEmail.InsertUserId = 1;
+      newEmail.InsertDate = DateTime.Now;
+      newEmail.UpdateUserId = 1;
+      newEmail.UpdateDate = DateTime.Now;
+      newEmail.ToUserId = emailData.Id;
+
+      return newEmail;
+    }
+
     public async Task<EmailTemplate> GetEmailTemplate(int id)
     {
       List<EmailTemplate> templates = await _cache.GetEmailTemplates();
@@ -855,6 +973,12 @@ namespace SmokeEnGrill.API.Data
       return types;
     }
 
+    public async Task<List<PayableAt>> GetPayableAts()
+    {
+      List<PayableAt> payableAts= await _cache.GetPayableAts();
+      return payableAts;
+    }
+
     public async Task<IEnumerable<Bank>> GetBanks()
     {
       List<Bank> banks = await _cache.GetBanks();
@@ -870,27 +994,11 @@ namespace SmokeEnGrill.API.Data
       return content;
     }
 
-    public async Task<List<Token>> GetTokens()
-    {
-      var tokens = await _context.Tokens.OrderBy(t => t.Name).ToListAsync();
-      return tokens;
-    }
-
-    public async Task<List<Token>> GetBroadcastTokens()
-    {
-      List<Token> tokensCached = await _cache.GetTokens();
-
-      var tokens = tokensCached
-        .Where(t => t.TokenTypeId == broadcastTokenTypeId)
-        .OrderBy(t => t.Name).ToList();
-      return tokens;
-    }
-
     public async Task<List<Product>> GetActiveProducts()
     {
       List<Product> productsCached = await _cache.GetProducts();
       var products = productsCached.Where(p => p.Active)
-                                   .OrderBy(o => o.DsplSeq).ThenBy(p => p.Name)
+                                   .OrderBy(p => p.Name)
                                    .ToList();
       return products;
     }
@@ -999,6 +1107,28 @@ namespace SmokeEnGrill.API.Data
       }
 
       return menuItems;
+    }
+
+    public MenuItemDto FindOrLoadParent(List<MenuItemDto> menuItems, List<MenuItemDto> userMenuItems, int parentMenuItemId)
+    {
+      //find the menu item in the entity list
+      MenuItemDto parentMenuItem = menuItems.Single(m => m.Id == parentMenuItemId);
+
+      //check if it has a parent
+      if (parentMenuItem.ParentMenuId != null)
+      {
+        //since this has a parent it should be added to its parent's children.
+        //try to find the parent in the list already
+        MenuItemDto parent = userMenuItems.FirstOrDefault(m => m.Id == Convert.ToInt32(parentMenuItem.ParentMenuId));
+        if (parent == null)
+        {
+          //this one's parent wasn't found, so add it
+          MenuItemDto newParent = FindOrLoadParent(menuItems, userMenuItems, Convert.ToInt32(parentMenuItem.ParentMenuId));
+          newParent.ChildMenuItems.Add(parentMenuItem);
+        }
+      }
+
+      return parentMenuItem;
     }
 
     public async Task<List<MenuItemDto>> GetUserTypeMenu(int userTypeId, int userId)

@@ -32,10 +32,6 @@ namespace SmokeEnGrill.API.Helpers
                 .ForMember(dest => dest.UserTypeName, opt => {
                     opt.MapFrom(src => src.UserType.Name);
                 });
-            CreateMap<User, UserForCallSheetDto>()
-                .ForMember(dest => dest.PhotoUrl, opt => {
-                    opt.MapFrom(src => src.Photos.FirstOrDefault(p => p.IsMain).Url);
-                });
             CreateMap<User, UserForDetailedDto>()
                 .ForMember(dest => dest.PhotoUrl, opt => {
                     opt.MapFrom(src => src.Photos.FirstOrDefault(p => p.IsMain).Url);
@@ -82,7 +78,7 @@ namespace SmokeEnGrill.API.Helpers
             CreateMap<UserForRegisterDto, User>();
             CreateMap<Product, ProductForConfigDto>()
                 .ForMember(dest => dest.TypeName, opt => opt
-                  .MapFrom(u => u.ProductType.Name))
+                  .MapFrom(u => u.ProductType.Name));
             CreateMap<EmployeeForEditDto, User>();
             CreateMap<User, EmployeeForEditDto>()
                 .ForMember(u => u.PhotoUrl, opt => opt
@@ -97,15 +93,11 @@ namespace SmokeEnGrill.API.Helpers
                 .ForMember(dest => dest.EmailType, opt => {
                   opt.MapFrom(d => d.EmailType.Name);
                 })
-                .ForMember(dest => dest.SentBy, opt => {
-                  opt.MapFrom(d => d.InsertUser.LastName + ' ' + d.InsertUser.FirstName);
-                })
+                // .ForMember(dest => dest.SentBy, opt => {
+                //   opt.MapFrom(d => d.InsertUser.LastName + ' ' + d.InsertUser.FirstName);
+                // })
                 .ForMember(dest => dest.DateSent, opt => {
                   opt.MapFrom(d => d.InsertDate.ToString("dd/MM/yyyy", frC));
-                });
-            CreateMap<User, UserToValidateDto>()
-                .ForMember(dest => dest.UserType, opt => {
-                  opt.MapFrom(d => d.UserType.Name);
                 });
             CreateMap<SmsTemplateForSaveDto, SmsTemplate>();
             // CreateMap<SmsTemplate, SmsTemplateForListDto>();
@@ -223,28 +215,6 @@ namespace SmokeEnGrill.API.Helpers
                 })
                 .ForMember(dest => dest.strAmountHT, opt => {
                   opt.MapFrom(src => src.AmountHT.ToString("N0") + " F");
-                })
-                .ForMember(dest => dest.strAmountTTC, opt => {
-                  opt.MapFrom(src => src.AmountTTC.ToString("N0") + " F");
-                });
-            CreateMap<Order, OrderUserToValidateDto>()
-                .ForMember(dest => dest.strOrderDate, opt => {
-                  opt.MapFrom(src => src.OrderDate.ToString("dd/MM/yyyy", frC));
-                })
-                .ForMember(dest => dest.strDeadline, opt => {
-                  opt.MapFrom(src => src.Deadline.ToString("dd/MM/yyyy", frC));
-                })
-                .ForMember(dest => dest.strDeadline, opt => {
-                  opt.MapFrom(src => src.Deadline.ToString("dd/MM/yyyy", frC));
-                })
-                .ForMember(dest => dest.NbDaysLate, opt => {
-                  opt.MapFrom(src => (src.Validity - DateTime.Now).TotalDays + 1);
-                })
-                .ForMember(dest => dest.NbChildren, opt => {
-                  opt.MapFrom(src => src.Lines.Count());
-                })
-                .ForMember(dest => dest.strValidity, opt => {
-                  opt.MapFrom(src => src.Validity.ToString("dd/MM/yyyy", frC));
                 })
                 .ForMember(dest => dest.strAmountTTC, opt => {
                   opt.MapFrom(src => src.AmountTTC.ToString("N0") + " F");

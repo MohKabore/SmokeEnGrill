@@ -17,12 +17,14 @@ namespace SmokeEnGrill.API.Models
         public string SecondPhoneNumber { get; set; }
         public int DistrictId { get; set; }
         public District District { get; set; }
+        public int CityId { get; set; }
+        public City City { get; set; }
         public DateTime? ValidationDate { get; set; }
         public DateTime Created { get; set; }
         public DateTime LastActive { get; set; }
         public int ForgotPasswordCount { get; set; }
         public int ResetPasswordCount { get; set; }
-        public string Idnum { get; set; }
+        public string IdNum { get; set; }
         public DateTime DateOfBirth { get; set; }
         public int NbChild { get; set; } = 0;
         public string Cni { get; set; }
