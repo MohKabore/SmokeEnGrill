@@ -1,6 +1,6 @@
 {
   "name": "smoke-en-grill-spa",
-  "version": "0.0.0",
+  "version": "1.0.0",
   "scripts": {
     "ng": "ng",
     "start": "ng serve",
@@ -13,6 +13,7 @@
   "private": true,
   "dependencies": {
     "@angular/animations": "12.1.4",
+    "@angular/cdk": "^12.1.4",
     "@angular/common": "12.1.4",
     "@angular/compiler": "12.1.4",
     "@angular/core": "12.1.4",
