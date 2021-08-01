@@ -27,7 +27,7 @@
     "@swimlane/ngx-datatable": "^19.0.0",
     "@types/chart.js": "^2.8.7",
     "alertifyjs": "^1.11.4",
-    "angular-calendar": "0.26.4",
+    "angular-calendar": "^0.28.26",
     "angular-in-memory-web-api": "^0.8.0",
     "angular-jwt": "^0.1.11",
     "angular2-ladda": "^3.2.0",
