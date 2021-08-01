@@ -6,13 +6,23 @@
 @import "../node_modules/@fortawesome/fontawesome-pro/css/all.min.css";
 // @import "../node_modules/ng-zorro-antd/ng-zorro-antd.css";
 
-@import "~ng-uikit-pro-standard/assets/scss/core/colors";
-@import "~ng-uikit-pro-standard/assets/scss/core/variables";
-@import "~ng-uikit-pro-standard/assets/scss/core/variables-pro";
+// @import "~ng-uikit-pro-standard/assets/scss/core/colors";
+// @import "~ng-uikit-pro-standard/assets/scss/core/variables";
+// @import "~ng-uikit-pro-standard/assets/scss/core/variables-pro";
 
-@import "~ng-uikit-pro-standard/assets/scss/addons-pro/_timelines-pro.scss";
-@import "~ng-uikit-pro-standard/assets/scss/addons-pro/_timeline-pro.scss";
+// @import "~ng-uikit-pro-standard/assets/scss/addons-pro/_timelines-pro.scss";
+// @import "~ng-uikit-pro-standard/assets/scss/addons-pro/_timeline-pro.scss";
 
+@import '~@fortawesome/fontawesome-free/scss/fontawesome.scss';
+@import '~@fortawesome/fontawesome-free/scss/solid.scss';
+@import '~@fortawesome/fontawesome-free/scss/regular.scss';
+@import '~@fortawesome/fontawesome-free/scss/brands.scss';
+
+@import '~mdb-angular-ui-kit/assets/scss/mdb.scss';
+
+.text-30 {
+  font-size: 30px;
+}
 .btnOrange {
   color: #192C47 !important;
   font-weight: bold !important;
@@ -122,8 +132,7 @@
   .zoom {
     transition: transform .2s; /* Animation */
   }
-  
+
   .zoom:hover {
     transform: scale(2); /* (150% zoom - Note: if the zoom is too large, it will go outside of the viewport) */
   }
-  

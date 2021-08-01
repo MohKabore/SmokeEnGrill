@@ -1,3 +1,47 @@
-<p>
-  home works!
-</p>
+<div class="row m-2">
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">nvlle commande</button>
+  </div>
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">stocks</button>
+  </div>
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">clients</button>
+  </div>
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">ventes</button>
+  </div>
+</div>
+<div class="row m-2">
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">cde en cours</button>
+  </div>
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">achats</button>
+  </div>
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">fidélité</button>
+  </div>
+  <div class="d-grid gap-2 col-md-3 mt-2">
+    <button class="btnBlue p-3 text-30" type="button">reporting</button>
+  </div>
+</div>
+<div class="row m-2">
+  <div class="col-md-3 mt-2">
+    <mdb-form-control>
+      <mdb-select>
+        <mdb-option *ngFor="let option of options" [value]="option.value">{{
+          option.label
+        }}</mdb-option>
+      </mdb-select>
+      <label mdbLabel class="form-label">Example label</label>
+    </mdb-form-control>
+  </div>
+  <div class="col-md-3 mt-2">
+    <mdb-form-control>
+      <input mdbInput type="text" id="form1" class="form-control" />
+      <label mdbLabel class="form-label" for="form1">Example label</label>
+    </mdb-form-control>
+  </div>
+</div>
+

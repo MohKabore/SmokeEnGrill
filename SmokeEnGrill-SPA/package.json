@@ -49,6 +49,7 @@
     "highlight.js": "9.13.1",
     "html2canvas": "^1.0.0-rc.5",
     "jspdf": "^1.5.3",
+    "mdb-angular-ui-kit": "git+https://oauth2:w3jUs5sXz9F-Zg4NAX2b@git.mdbootstrap.com/mdb/angular/mdb5/prd/mdb5-angular-ui-kit-pro-essential.git",
     "ng-uikit-pro-standard": "git+https://oauth2:H-RneyEbamE2m_vfv6q_@git.mdbootstrap.com/mdb/angular/ng-uikit-pro-standard.git#8.8.2",
     "ng2-file-upload": "^1.3.0",
     "ng2-validation": "4.2.0",
