@@ -71,11 +71,11 @@ namespace SmokeEnGrill.API.Data
             if (fullAddress != null)
             {
             subdomain = fullAddress[0].ToLower();
-            if(subdomain == "localhost:5000" || subdomain == "test2")
+            if(subdomain == "localhost:5000" || subdomain == "test1")
             {
                 subdomain = "SmokeNGrill";
             }
-            else if (subdomain == "test1" || subdomain == "www" || subdomain == "educnotes") {
+            else if (subdomain == "www" || subdomain == "test2") {
                 subdomain = "demo";
             }
             }
