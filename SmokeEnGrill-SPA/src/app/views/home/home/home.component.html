@@ -1,6 +1,18 @@
 <div class="row m-2">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-body p-2">
+        <div class="row">
+          <h5 class="col-md-3">ventes</h5>
+          <div class="col-md-3">aujourd'hui : 53 000 F</div>
+          <div class="col-md-3">semaine : 153 000 F</div>
+          <div class="col-md-3">mois : 553 000 F</div>
+        </div>
+      </div>
+    </div>
+  </div>
   <div class="d-grid gap-2 col-md-3 mt-2">
-    <button class="btnBlue p-3 text-30" type="button">nvlle commande</button>
+    <button class="btnBlue p-3 text-30" routerLink="/orders/addOrder" type="button">nvlle commande</button>
   </div>
   <div class="d-grid gap-2 col-md-3 mt-2">
     <button class="btnBlue p-3 text-30" type="button">stocks</button>
@@ -27,21 +39,29 @@
   </div>
 </div>
 <div class="row m-2">
-  <div class="col-md-3 mt-2">
-    <mdb-form-control>
-      <mdb-select>
-        <mdb-option *ngFor="let option of options" [value]="option.value">{{
-          option.label
-        }}</mdb-option>
-      </mdb-select>
-      <label mdbLabel class="form-label">Example label</label>
-    </mdb-form-control>
-  </div>
-  <div class="col-md-3 mt-2">
-    <mdb-form-control>
-      <input mdbInput type="text" id="form1" class="form-control" />
-      <label mdbLabel class="form-label" for="form1">Example label</label>
-    </mdb-form-control>
+  <div class="col-md-12">
+    <div class="card">
+      <div class="card-body">
+        <h5 class="card-title">commandes en cours</h5>
+        <hr />
+        <div class="card-text">
+          <div class="row">
+            <div class="col-12 mb-2">
+              1.<span class="ml-2"><b>MOULOT GEORGES</b></span
+              >. montant : 23 500 F. 2 poulets, 1 ribs de porc.
+            </div>
+            <div class="col-12 mb-2">
+              2.<span class="ml-2"><b>MOULOT YVES</b></span
+              >. montant : 19 500 F. 2 poulets, 1 ribs de porc.
+            </div>
+            <div class="col-12 mb-2">
+              3.<span class="ml-2"><b>MOULOT GEORGES</b></span
+              >. montant : 22 500 F. 2 poulets, 1 ribs de porc.
+            </div>
+          </div>
+        </div>
+        <a href="#" class="btn btn-primary">Button</a>
+      </div>
+    </div>
   </div>
 </div>
-

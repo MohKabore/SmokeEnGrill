@@ -1,0 +1,42 @@
+<div class="row m-2">
+  <div class="col-12">
+    <div class="pageTitle">nouvelle commande</div>
+  </div>
+  <hr/>
+  <div class="col-12">
+    <div class="row">
+      <div class="col-md-1 text-30 my-auto">n° tél</div>
+      <div class="col-11">
+        <div class="d-flex">
+          <input type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, null, digit2)"  #digit1 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit1, digit3)"  #digit2 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit2, digit4)"  #digit3 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit3, digit5)"  #digit4 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit4, digit6)"  #digit5 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit5, digit7)"  #digit6 class="textBoxSquare" />
+            <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit6, digit8)"  #digit7 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit7, digit9)"  #digit8 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit8, digit10)"  #digit9 class="textBoxSquare" />
+          <input  type="text" maxlength="1"
+            (keyup)="goToNextPhoneDigit($event, digit9, null)"  #digit10 class="textBoxSquare" />
+        </div>
+      </div>
+      <div class="col-md-1 text-30 my-auto">nom</div>
+      <div class="col-md-3">
+        <mdb-form-control>
+          <input mdbInput type="text" id="name" class="form-control form-control-lg" />
+          <label mdbLabel class="form-label" for="name">nom du client</label>
+        </mdb-form-control>
+      </div>
+    </div>
+  </div>
+</div>
