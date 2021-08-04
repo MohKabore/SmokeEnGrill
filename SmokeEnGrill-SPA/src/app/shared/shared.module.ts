@@ -6,6 +6,7 @@ import { MdbFormsModule } from 'mdb-angular-ui-kit/forms';
 import { MdbAutocompleteModule } from 'mdb-angular-ui-kit/autocomplete';
 import { MdbDatepickerModule } from 'mdb-angular-ui-kit/datepicker';
 import { MdbTimepickerModule } from 'mdb-angular-ui-kit/timepicker';
+import { MdbNotificationModule } from 'mdb-angular-ui-kit/notification';
 
 @NgModule({
   imports: [
@@ -15,7 +16,8 @@ import { MdbTimepickerModule } from 'mdb-angular-ui-kit/timepicker';
     MdbFormsModule,
     MdbAutocompleteModule,
     MdbDatepickerModule,
-    MdbTimepickerModule
+    MdbTimepickerModule,
+    MdbNotificationModule
   ],
   declarations: [
 
@@ -26,7 +28,8 @@ import { MdbTimepickerModule } from 'mdb-angular-ui-kit/timepicker';
     MdbFormsModule,
     MdbAutocompleteModule,
     MdbDatepickerModule,
-    MdbTimepickerModule
+    MdbTimepickerModule,
+    MdbNotificationModule
   ]
 })
 export class SharedModule { }

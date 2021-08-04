@@ -1,13 +1,14 @@
 import { Component, OnInit } from '@angular/core';
-import { SharedAnimations } from 'src/app/shared/animations/shared-animations';
 import { FormGroup, FormBuilder, Validators } from '@angular/forms';
 import { Router, RouteConfigLoadStart, ResolveStart, RouteConfigLoadEnd, ResolveEnd, ActivatedRouteSnapshot, ActivatedRoute } from '@angular/router';
+import { AuthService } from 'src/app/core/services/auth.service';
+import { AlertifyService } from 'src/app/core/services/alertify.service';
+import { User } from 'src/app/shared/models/user';
 
 @Component({
     selector: 'app-signin',
     templateUrl: './signin.component.html',
-    styleUrls: ['./signin.component.scss'],
-    animations: [SharedAnimations]
+    styleUrls: ['./signin.component.scss']
 })
 export class SigninComponent implements OnInit {
   model: any = {};
@@ -44,21 +45,11 @@ export class SigninComponent implements OnInit {
         }
       });
 
-      this.getLoginPageInfos();
-
       this.signinForm = this.fb.group({
         username: ['', Validators.required],
         password: ['', Validators.required]
       });
     }
-  }
-
-  getLoginPageInfos() {
-    this.authService.getLoginPageInfos().subscribe(data => {
-      this.infos = data;
-    }, error => {
-      this.alertify.error(error);
-    });
   }
 
   loggedIn() {

@@ -6,6 +6,7 @@ import { AppComponent } from './app.component';
 import { CoreModule } from './core/core.module';
 import { registerLocaleData } from '@angular/common';
 import localeFr from '@angular/common/locales/fr';
+import { AuthGuard } from './core/guards/auth.guard';
 // the second parameter 'fr' is optional
 registerLocaleData(localeFr, 'fr');
 
@@ -20,6 +21,7 @@ registerLocaleData(localeFr, 'fr');
     CoreModule
   ],
   providers: [
+    AuthGuard
   ],
   exports: [
 

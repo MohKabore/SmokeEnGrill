@@ -1,11 +1,12 @@
 import { Component, OnInit } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AlertifyService } from 'src/app/core/services/alertify.service';
+import { AuthService } from 'src/app/core/services/auth.service';
 
 @Component({
   selector: 'app-forgot',
   templateUrl: './forgot.component.html',
-  styleUrls: ['./forgot.component.scss'],
-  animations: [SharedAnimations]
+  styleUrls: ['./forgot.component.scss']
 })
 export class ForgotComponent implements OnInit {
   resetPwdForm: FormGroup;
