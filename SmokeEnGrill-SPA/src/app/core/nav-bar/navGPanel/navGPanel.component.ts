@@ -12,4 +12,8 @@ export class NavGPanelComponent implements OnInit {
   ngOnInit() {
   }
 
+  goHome() {
+
+  }
+
 }

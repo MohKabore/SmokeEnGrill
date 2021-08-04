@@ -14,45 +14,8 @@ namespace SmokeEnGrill.API.Data
         public static void SeedUsers(DataContext context, UserManager<User> userManager, RoleManager<Role> roleManager)
         {
 
-            //roleManager.CreateAsync(new Role { Name = "Idemia" }).Wait();
-
-            // var users = context.Users.Where(r => r.TypeEmpId == 3);
-            // int step = 0;
-            // var lst2 = new List<int>();
-            // foreach (var usr in users)
-            // {
-            //     var doublons = users.Where(r => r.TypeEmpId == usr.TypeEmpId && r.LastName == usr.LastName &&
-            //     r.PhoneNumber == usr.PhoneNumber && r.Id != usr.Id);
-            //     if (doublons.Count() > 0)
-            //         lst2.AddRange(doublons.Select(a => a.Id));
-            // }
-
-            // try
-            // {
-            //     foreach (var userid in lst2.Distinct())
-            //     {
-            //         var userh = context.UserHistories.Where(a => a.UserId == userid);
-            //         context.RemoveRange(userh);
-            //         var user = context.Users.FirstOrDefault(a => a.Id == userid);
-            //         context.Remove(user);
-            //     }
-            //     context.SaveChanges();
-            // }
-            // catch (System.Exception)
-            // {
-
-            //     throw;
-            // }
-
-
             if (!userManager.Users.Any())
             {
-                // var userData = System.IOvi.File.ReadAllText("Data/UserSeedData.json");
-                // var users = JsonConvert.DeserializeObject<List<User>>(userData);
-
-                //    context.AddRange(regions);
-                //                context.SaveChanges();
-
                 var payments = new List<PaymentType>{
                     new PaymentType { Name = "espèce" },
                     new PaymentType { Name = "mobile money"},
@@ -97,6 +60,7 @@ namespace SmokeEnGrill.API.Data
                     new StoreType {Name = "employé"}
                 };
                 context.AddRange(storetypes);
+                context.SaveChanges();
 
                 var stores = new List<Store> {
                 new Store { Name = "magasin principal", StoreTypeId = 1 },
@@ -131,7 +95,8 @@ namespace SmokeEnGrill.API.Data
                     FirstName = "admin",
                     LastName = "admin",
                     Email = "adminUser@SmokeEnGrill.com",
-                    EmailConfirmed = true
+                    EmailConfirmed = true,
+                    UserTypeId = 1
                 };
 
                 IdentityResult result = userManager.CreateAsync(adminUser, "password").Result;

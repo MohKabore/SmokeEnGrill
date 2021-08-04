@@ -68,193 +68,72 @@
           <div>adresse : entre la pharmacie Ste Cécile et le bvd Latrille; 3 portail à gauche en venant de la phcie</div>
         </div>
       </div>
+      <div class="card mb-2">
+        <div class="card-body">
+          <div class="row">
+            <div class="col-md-3">
+              <mdb-form-control>
+                <input mdbInput type="text" [mdbDatepicker]="datepicker"
+                  (click)="datepicker.open()" class="form-control" id="exampleDatepicker" />
+                <label mdbLabel for="exampleDatepicker" class="form-label">date de livraison</label>
+                <mdb-datepicker-toggle [mdbDatepicker]="datepicker"></mdb-datepicker-toggle>
+                <mdb-datepicker [options]="datepickerOptions"  (dateChanged)="datepicker.close()"
+                  [startDay]="1" #datepicker></mdb-datepicker>
+              </mdb-form-control>
+            </div>
+            <div class="col-md-2">
+              <mdb-form-control>
+                <input mdbInput type="text" id="form1" class="form-control" (click)="timepicker.open()" [mdbTimepicker]="timepicker" required />
+                <label mdbLabel class="form-label" for="form1">heure de livraison</label>
+                <mdb-timepicker-toggle [mdbTimepickerToggle]="timepicker"></mdb-timepicker-toggle>
+                <mdb-timepicker #timepicker [format24]="true"></mdb-timepicker>
+              </mdb-form-control>
+            </div>
+          </div>
+        </div>
+      </div>
       <div class="card">
         <div class="card-body">
           <h5 class="card-title"><b>détails de la commande</b></h5>
           <hr/>
           <div class="row">
-            <div class="col-md-4 mb-2">
+            <div class="col-md-4 mb-2" *ngFor="let prod of products; let i = index">
               <div class="border rounded-lg p-2">
                 <div class="row d-none d-md-block">
                   <div class="col-12">
                     <div class="d-flex">
-                      <div class="text-25 my-auto flex-grow-1">produit 1 @ 6 500 F</div>
+                      <div class="text-20 my-auto flex-grow-1">
+                        <b>{{prod.name}} @ <span class="textBlue">{{prod.price | number:'':'fr-FR'}}F</span></b>
+                      </div>
                       <div class="d-md-flex my-auto">
-                        <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                        <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                        <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
+                        <a (click)="qtyDown(i, prod.price)">
+                          <i class="fad fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
+                            --fa-primary-color:#ffffff;--fa-secondary-color:#192C47;"></i>
+                        </a>
+                        <div class="text-25 mx-3 my-auto"><b>{{prodQties[i]}}</b></div>
+                        <a (click)="qtyUp(i, prod.price)">
+                          <i class="fad fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
+                            --fa-primary-color:#ffffff;--fa-secondary-color:#192C47;"></i>
+                        </a>
                       </div>
                     </div>
                     <div class="text-15">2 sauces, un piment et une frite</div>
                   </div>
                 </div>
                 <div class="d-md-none">
-                  <div class="text-25">produit 1 @ 6 500 F</div>
+                  <div class="text-25">{{prod.name}} @ {{prod.price | number:'':'fr-FR'}}F</div>
                   <div class="text-15">2 sauces et une frite</div>
                   <hr/>
                   <div class="d-flex justify-content-around">
-                    <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                    <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                    <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-2">
-              <div class="border rounded-lg p-2">
-                <div class="row d-none d-md-block">
-                  <div class="col-12">
-                    <div class="d-flex">
-                      <div class="text-25 my-auto flex-grow-1">produit 1 @ 6 500 F</div>
-                      <div class="d-md-flex my-auto">
-                        <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                        <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                        <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                      </div>
-                    </div>
-                    <div class="text-15">2 sauces, un piment et une frite</div>
-                  </div>
-                </div>
-                <div class="d-md-none">
-                  <div class="text-25">produit 1 @ 6 500 F</div>
-                  <div class="text-15">2 sauces et une frite</div>
-                  <hr/>
-                  <div class="d-flex justify-content-around">
-                    <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                    <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                    <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-2">
-              <div class="border rounded-lg p-2">
-                <div class="row d-none d-md-block">
-                  <div class="col-12">
-                    <div class="d-flex">
-                      <div class="text-25 my-auto flex-grow-1">produit 1 @ 6 500 F</div>
-                      <div class="d-md-flex my-auto">
-                        <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                        <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                        <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                      </div>
-                    </div>
-                    <div class="text-15">2 sauces, un piment et une frite</div>
-                  </div>
-                </div>
-                <div class="d-md-none">
-                  <div class="text-25">produit 1 @ 6 500 F</div>
-                  <div class="text-15">2 sauces et une frite</div>
-                  <hr/>
-                  <div class="d-flex justify-content-around">
-                    <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                    <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                    <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-2">
-              <div class="border rounded-lg p-2">
-                <div class="row d-none d-md-block">
-                  <div class="col-12">
-                    <div class="d-flex">
-                      <div class="text-25 my-auto flex-grow-1">produit 1 @ 6 500 F</div>
-                      <div class="d-md-flex my-auto">
-                        <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                        <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                        <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                      </div>
-                    </div>
-                    <div class="text-15">2 sauces, un piment et une frite</div>
-                  </div>
-                </div>
-                <div class="d-md-none">
-                  <div class="text-25">produit 1 @ 6 500 F</div>
-                  <div class="text-15">2 sauces et une frite</div>
-                  <hr/>
-                  <div class="d-flex justify-content-around">
-                    <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                    <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                    <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-2">
-              <div class="border rounded-lg p-2">
-                <div class="row d-none d-md-block">
-                  <div class="col-12">
-                    <div class="d-flex">
-                      <div class="text-25 my-auto flex-grow-1">produit 1 @ 6 500 F</div>
-                      <div class="d-md-flex my-auto">
-                        <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                        <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                        <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                      </div>
-                    </div>
-                    <div class="text-15">2 sauces, un piment et une frite</div>
-                  </div>
-                </div>
-                <div class="d-md-none">
-                  <div class="text-25">produit 1 @ 6 500 F</div>
-                  <div class="text-15">2 sauces et une frite</div>
-                  <hr/>
-                  <div class="d-flex justify-content-around">
-                    <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                    <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                    <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div class="col-md-4 mb-2">
-              <div class="border rounded-lg p-2">
-                <div class="row d-none d-md-block">
-                  <div class="col-12">
-                    <div class="d-flex">
-                      <div class="text-25 my-auto flex-grow-1">produit 1 @ 6 500 F</div>
-                      <div class="d-md-flex my-auto">
-                        <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                        <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                        <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                          --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                      </div>
-                    </div>
-                    <div class="text-15">2 sauces, un piment et une frite</div>
-                  </div>
-                </div>
-                <div class="d-md-none">
-                  <div class="text-25">produit 1 @ 6 500 F</div>
-                  <div class="text-15">2 sauces et une frite</div>
-                  <hr/>
-                  <div class="d-flex justify-content-around">
-                    <i class="fal fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
-                    <div class="text-25 mx-3 my-auto"><b>0</b></div>
-                    <i class="fal fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
-                      --fa-primary-color:#192C47;--fa-secondary-color:#f89f20;"></i>
+                    <a (click)="qtyDown(i, prod.price)">
+                      <i class="fad fa-minus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
+                      --fa-primary-color:#ffffff;--fa-secondary-color:#192C47;"></i>
+                    </a>
+                    <div class="text-25 mx-3 my-auto"><b>{{prodQties[i]}}</b></div>
+                    <a (click)="qtyUp(i, prod.price)">
+                      <i class="fad fa-plus-square fa-2x mr-2" style="--fa-secondary-opacity: 1;
+                        --fa-primary-color:#ffffff;--fa-secondary-color:#192C47;"></i>
+                    </a>
                   </div>
                 </div>
               </div>
@@ -262,8 +141,20 @@
           </div>
           <hr>
           <div class="row">
-            <div class="col-md-10 text-25 textBlue text-right"><b>TOTAL</b></div>
-            <div class="col-md-2 text-25 textBlue text-right"><b>35 500 F</b></div>
+            <div class="col-md-9"></div>
+            <div class="col-md-3">
+              <div class="border rounded-lg p-2" style="background-color: #00008B; color: #ffffff;">
+                <div class="row">
+                  <div class="col-6 text-25"><b>TOTAL</b></div>
+                  <div class="col-6 text-25  text-right"><b>{{totalOrder | number:'':'fr-FR'}} F</b></div>
+                </div>
+              </div>
+            </div>
+            <div class="col-12 mt-2">
+              <div class="d-grid gap-2">
+                <button type="button" class="btn btn-lg btnBlue">saisir la cde</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>

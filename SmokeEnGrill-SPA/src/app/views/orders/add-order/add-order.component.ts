@@ -1,7 +1,5 @@
 import { Component, OnInit } from '@angular/core';
-import { FormControl } from '@angular/forms';
-import { Observable, Subject } from 'rxjs';
-import { debounceTime, map, tap } from 'rxjs/operators';
+import { Utils } from 'src/app/shared/utils';
 
 @Component({
   selector: 'app-add-order',
@@ -12,6 +10,10 @@ export class AddOrderComponent implements OnInit {
   clients = [{id: 1, lastName: 'moulot', mobile: '0707104446'}, {id: 2, lastName: 'smokengrill', mobile: '0797979707'},
   {id: 3, lastName: 'bechio', mobile: '0787878707'}, {id: 4, lastName: 'rousseau', mobile: '0707101010'},
   {id: 5, lastName: 'adjadja', mobile: '0710101010'}, {id: 6, lastName: 'sonia', mobile: '0505050505'}]
+  products = [{id: 1, name: 'poulet fumé', price: 6500}, {id: 2, name: 'ribs de porc', price: 9000},
+  {id: 3, name: 'ribs de boeuf', price: 22000}, {id: 4, name: 'burger boeuf fumé', price: 6500},
+  {id: 5, name: 'burger proc fumé', price: 5500}];
+  datepickerOptions = Utils.translationOptions;
   showClientInfo = false;
   clientsFound = [];
   clientId = 0;
@@ -19,6 +21,8 @@ export class AddOrderComponent implements OnInit {
   clientLName = '';
   clientMobile = '';
   clientAddress = '';
+  totalOrder = 0;
+  prodQties = [0 ,0 , 0, 0, 0, 0]
 
   constructor() { }
 
@@ -69,6 +73,19 @@ export class AddOrderComponent implements OnInit {
     this.clientId = client.id;
     this.clientLName = client.lastName;
     this.clientMobile = client.mobile;
+  }
+
+  qtyDown(index, unitPrice) {
+    const oldQty = this.prodQties[index];
+    if (oldQty > 0) {
+      const newQty = this.prodQties[index]--;
+      this.totalOrder -= unitPrice;
+    }
+  }
+
+  qtyUp(index, unitPrice) {
+    this.prodQties[index]++;
+    this.totalOrder += unitPrice;
   }
 
 }

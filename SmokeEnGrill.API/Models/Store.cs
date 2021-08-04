@@ -12,7 +12,7 @@ namespace SmokeEnGrill.API.Models
         public Store StoreP { get; set; }
         public int? DistrictId { get; set; }
         public District District { get; set; }
-        public int UserId { get; set; }
+        public int? UserId { get; set; }
         public User User { get; set; }
         public byte Status { get; set; }
     }
