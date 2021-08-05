@@ -31,9 +31,6 @@ namespace SmokeEnGrill.API.Data
     private readonly IMapper _mapper;
     private readonly UserManager<User> _userManager;
     public readonly RoleManager<Role> _roleManager;
-    private Cloudinary _cloudinary;
-    private readonly IOptions<CloudinarySettings> _cloudinaryConfig;
-    string password;
     int teacherTypeId, parentTypeId, studentTypeId, adminTypeId;
     int parentRoleId, memberRoleId, moderatorRoleId, adminRoleId, teacherRoleId;
     int employeeConfirmEmailId, resetPwdEmailId, updateAccountEmailId, broadcastTokenTypeId;
@@ -44,11 +41,10 @@ namespace SmokeEnGrill.API.Data
 
     public SmokeEnGrillRepository(DataContext context, IConfiguration config, IEmailSender emailSender,
         UserManager<User> userManager, IMapper mapper, IHttpContextAccessor httpContext,
-        RoleManager<Role> roleManager, ICacheRepository cache, IOptions<CloudinarySettings> cloudinaryConfig)
+        RoleManager<Role> roleManager, ICacheRepository cache)
     {
       _userManager = userManager;
       _roleManager = roleManager;
-      _cloudinaryConfig = cloudinaryConfig;
       _cache = cache;
       _context = context;
       _httpContext = httpContext;
@@ -56,7 +52,6 @@ namespace SmokeEnGrill.API.Data
       _emailSender = emailSender;
       _mapper = mapper;
       _config = config;
-      password = _config.GetValue<String>("AppSettings:defaultPassword");
       adminTypeId = _config.GetValue<int>("AppSettings:adminTypeId");
       adminRoleId = _config.GetValue<int>("AppSettings:adminRoleId");
       adminTypeId = _config.GetValue<int>("AppSettings:adminTypeId");
@@ -65,14 +60,6 @@ namespace SmokeEnGrill.API.Data
       resetPwdEmailId = _config.GetValue<int>("AppSettings:resetPwdEmailId");
       updateAccountEmailId = _config.GetValue<int>("AppSettings:updateAccountEmailId");
       broadcastTokenTypeId = _config.GetValue<int>("AppSettings:broadcastTokenTypeId");
-
-      _cloudinaryConfig = cloudinaryConfig;
-      Account acc = new Account(
-        _cloudinaryConfig.Value.CloudName,
-        _cloudinaryConfig.Value.ApiKey,
-        _cloudinaryConfig.Value.ApiSecret
-      );
-      _cloudinary = new Cloudinary(acc);
     }
 
     public void Add<T>(T entity) where T : class
@@ -118,20 +105,6 @@ namespace SmokeEnGrill.API.Data
       return user;
     }
 
-    public async Task<bool> UserNameExist(string userName, int currentUserId)
-    {
-      List<User> users = await _cache.GetUsers();
-
-      var user = users.Where(u => u.Id != currentUserId)
-                      .FirstOrDefault(e => e.UserName.ToLower() == userName.ToLower());
-
-      if (user != null)
-      {
-        return true;
-      }
-      return false;
-    }
-
     public async Task<User> GetUserByEmail(string email)
     {
       return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToUpper() == email.ToUpper());
@@ -162,88 +135,6 @@ namespace SmokeEnGrill.API.Data
 
     }
 
-    public string GetAppSubDomain()
-    {
-      string subdomain = "";
-      //To get subdomain
-      string[] fullAddress = _httpContext.HttpContext?.Request?.Headers?["Host"].ToString()?.Split('.');
-      if (fullAddress != null)
-      {
-        subdomain = fullAddress[0].ToLower();
-        if (subdomain == "localhost:5000" || subdomain == "www" || subdomain == "educnotes")
-        {
-          subdomain = "";
-        }
-      }
-
-      return subdomain;
-    }
-
-    public async Task<Photo> GetPhoto(int id)
-    {
-      var photo = await _context.Photos.IgnoreQueryFilters()
-          .FirstOrDefaultAsync(p => p.Id == id);
-
-      return photo;
-    }
-
-    public Boolean DeletePhotoFromCloudinary(string publicId)
-    {
-      var deleteParams = new DeletionParams(publicId);
-      var result = _cloudinary.Destroy(deleteParams);
-      if (result.Result != "ok")
-      {
-        return false;
-      }
-
-      return true;
-    }
-
-    public async Task<ErrorDto> DeletePhoto(int userId, int id)
-    {
-      ErrorDto error = new ErrorDto();
-      error.NoError = true;
-
-      var user = await GetUser(userId, true);
-      var photoFromRepo = await GetPhoto(id);
-
-      if (photoFromRepo.IsMain)
-      {
-        error.NoError = false;
-        error.Message = "You cannot delete your main photo";
-      }
-
-      if (photoFromRepo.PublicId != null)
-      {
-        var deleteParams = new DeletionParams(photoFromRepo.PublicId);
-        var result = _cloudinary.Destroy(deleteParams);
-        if (result.Result == "ok")
-        {
-          Delete(photoFromRepo);
-        }
-      }
-
-      if (photoFromRepo.PublicId == null)
-      {
-        Delete(photoFromRepo);
-      }
-
-      if (await SaveAll())
-      {
-        error.NoError = true;
-        return error;
-      }
-
-      error.NoError = false;
-      error.Message = "failed to delete the photo";
-      return error;
-    }
-
-    public async Task<Photo> GetMainPhotoForUser(int userId)
-    {
-      return await _context.Photos.Where(u => u.UserId == userId)
-          .FirstOrDefaultAsync(p => p.IsMain);
-    }
 
     // public async Task<PagedList<User>> GetUsers(UserParams userParams)
     // {
@@ -302,49 +193,6 @@ namespace SmokeEnGrill.API.Data
       return (userRolesCached != null);
     }
 
-    public async Task<bool> EmailExist(string email)
-    {
-      var user = await _context.Users.FirstOrDefaultAsync(e => e.Email == email);
-      if (user != null)
-        return true;
-      return
-      false;
-    }
-
-    public async Task<bool> SendResetPasswordLink(User user, string token)
-    {
-      var template = await _context.EmailTemplates.FirstAsync(t => t.Id == resetPwdEmailId);
-      var email = await SetEmailForResetPwdLink(template.Subject, template.Body, user.Id,
-          user.LastName, user.FirstName, user.Gender, user.Email, token);
-      _context.Add(email);
-
-      if (!await SaveAll())
-        return false;
-      else
-        return true;
-    }
-
-    public async Task<Email> SetEmailForResetPwdLink(string subject, string content, int userId, string lastName,
-    string firstName, byte gender, string userEmail, string resetToken)
-    {
-      var tokens = await GetTokens();
-
-      Email newEmail = new Email();
-      newEmail.EmailTypeId = 1;
-      newEmail.ToAddress = userEmail;
-      newEmail.FromAddress = "no-reply@educnotes.com";
-      newEmail.Subject = subject;
-      List<TokenDto> tags = GetResetPwdLinkTokenValues(tokens, userId, lastName, firstName, gender, resetToken);
-      newEmail.Body = ReplaceTokens(tags, content);
-      newEmail.InsertUserId = 1;
-      newEmail.InsertDate = DateTime.Now;
-      newEmail.UpdateUserId = 1;
-      newEmail.UpdateDate = DateTime.Now;
-      newEmail.ToUserId = userId;
-
-      return newEmail;
-    }
-
     public async Task<List<Token>> GetTokens()
     {
       var tokens = await _cache.GetTokens();
@@ -399,49 +247,6 @@ namespace SmokeEnGrill.API.Data
             break;
           case "<M_MME>":
             td.Value = gender == 0 ? "Mme" : "M.";
-            break;
-          default:
-            break;
-        }
-
-        if(td.Value != null)
-          tokenValues.Add(td);
-      }
-
-      return tokenValues;
-    }
-
-    public List<TokenDto> GetResetPwdLinkTokenValues(IEnumerable<Token> tokens, int userId, string lastName,
-      string firstName, byte gender, string resetToken)
-    {
-      var subDomain = GetAppSubDomain();
-      List<TokenDto> tokenValues = new List<TokenDto>();
-
-      foreach (var token in tokens)
-      {
-        TokenDto td = new TokenDto();
-        td.TokenString = token.TokenString;
-        switch (td.TokenString)
-        {
-          case "<N_USER>":
-            td.Value = lastName;
-            break;
-          case "<P_USER>":
-            td.Value = firstName;
-            break;
-          case "<M_MME>":
-            td.Value = gender == 0 ? "Mme" : "M.";
-            break;
-          case "<SUBDOMAIN>":
-            td.Value = subDomain == "" ? "" : subDomain + ".";
-            break;
-          case "<CONFIRM_LINK>":
-            string url = "";
-            if (subDomain != "")
-              url = string.Format(baseUrl, subDomain + ".");
-            else
-              url = string.Format(baseUrl, "");
-            td.Value = string.Format("{0}/resetPassword?id={1}&token={2}", url, userId, HttpUtility.UrlEncode(resetToken));
             break;
           default:
             break;
@@ -518,70 +323,6 @@ namespace SmokeEnGrill.API.Data
       return tokenValues;
     }
 
-    public List<TokenDto> GetEmployeeEmailTokenValues(List<Token> tokens, ConfirmEmployeeEmailDto emailData)
-    {
-      List<TokenDto> tokenValues = new List<TokenDto>();
-
-      foreach (var token in tokens)
-      {
-        TokenDto td = new TokenDto();
-        td.TokenString = token.TokenString;
-        var subDomain = GetAppSubDomain();
-        string teacherId = emailData.Id.ToString();
-
-        switch (td.TokenString)
-        {
-          case "<N_USER>":
-            td.Value = emailData.LastName.FirstLetterToUpper();
-            break;
-          case "<P_USER>":
-            td.Value = emailData.FirstName.FirstLetterToUpper();
-            break;
-          case "<M_MME>":
-            td.Value = emailData.Gender == 0 ? "Mme" : "M.";
-            break;
-          case "<CELL_USER>":
-            td.Value = emailData.Cell;
-            break;
-          case "<EMAIL_USER>":
-            td.Value = emailData.Email;
-            break;
-          case "<TOKEN>":
-            td.Value = emailData.Token;
-            break;
-          case "<ROLE>":
-            td.Value = emailData.Role;
-            break;
-          case "<CONFIRM_LINK>":
-            string url = "";
-            if (subDomain != "")
-              url = string.Format(baseUrl, subDomain + ".");
-            else
-              url = string.Format(baseUrl, "");
-            td.Value = string.Format("{0}/confirmUserEmail?id={1}&token={2}", url,
-              teacherId, HttpUtility.UrlEncode(emailData.Token));
-            break;
-          default:
-            break;
-        }
-
-        if(td.Value != null)
-          tokenValues.Add(td);
-      }
-
-      return tokenValues;
-    }
-
-    public async Task<IEnumerable<City>> GetAllCities()
-    {
-      return (await _context.Cities.OrderBy(c => c.Name).ToListAsync());
-    }
-
-    public async Task<IEnumerable<District>> GetAllGetDistrictsByCityIdCities(int id)
-    {
-      return (await _context.Districts.Where(c => c.CityId == id).OrderBy(c => c.Name).ToListAsync());
-    }
-
     public void AddUserLink(int userId, int parentId)
     {
       var nouveau_link = new UserLink
@@ -590,360 +331,6 @@ namespace SmokeEnGrill.API.Data
         UserPId = parentId
       };
       Add(nouveau_link);
-    }
-
-    // public async Task<List<string>> GetEmails()
-    // {
-    //     return await _context.Users.Where(a => a.Email != null).Select(a => a.Email).ToListAsync();
-    // }
-
-    // public async Task<List<string>> GetUserNames()
-    // {
-    //     return await _context.Users.Where(a => a.UserName != null).Select(a => a.UserName).ToListAsync();
-    // }
-
-    // public async Task sendOk(int userTypeId, int userId)
-    // {
-    //     if (userTypeId == studentTypeId)
-    //     {
-    //         // envoi de mail de l'affectation de l'eleve au professeur
-
-    //         // recuperation des emails de ses parents
-
-    //         var parents = await _context.UserLinks
-    //             .Include(c => c.UserP)
-    //             .Where(u => u.UserId == userId).Select(c => c.UserP)
-    //             .ToListAsync();
-
-    //         // récupération de nom de la classe de l'eleve
-    //         var student = await _context.Users.Include(c => c.Class)
-    //             .FirstOrDefaultAsync(u => u.Id == userId);
-
-    //         // formatage du mail
-    //         foreach (var parent in parents)
-    //         {
-    //             var emailform = new EmailFormDto
-    //             {
-    //                 toEmail = parent.Email,
-    //                 subject = "Confirmation mise en salle de votre enfant ",
-    //                 content = "<b> Bonjour " + parent.LastName + " " + parent.FirstName + "</b>, <br>" +
-    //                 "Votre enfant <b>" + student.FirstName + " " + student.FirstName +
-    //                 " </b> a bien été enregistré(s) dans la classe de <b>" + student.Class.Name
-    //             };
-    //             await SendEmail(emailform);
-    //         }
-
-    //     }
-    // }
-
-    public async Task<bool> EditUserAccount(UserAccountForEditDto user)
-    {
-      List<User> users = await _cache.GetUsers();
-      bool resultStatus = false;
-      using (var identityContextTransaction = _context.Database.BeginTransaction())
-      {
-        try
-        {
-          User appUser = users.FirstOrDefault(u => u.Id == user.Id);
-          appUser.LastName = user.LastName;
-          appUser.FirstName = user.FirstName;
-          appUser.Gender = user.Gender;
-          var dateArray = user.strDateOfBirth.Split("/");
-          int year = Convert.ToInt32(dateArray[2]);
-          int month = Convert.ToInt32(dateArray[1]);
-          int day = Convert.ToInt32(dateArray[0]);
-          DateTime birthDay = new DateTime(year, month, day);
-          appUser.DateOfBirth = birthDay;
-          appUser.SecondPhoneNumber = user.SecondPhoneNumber;
-          if (user.CityId > 0)
-            appUser.CityId = user.CityId;
-          if (user.DistrictId > 0)
-            appUser.DistrictId = user.DistrictId;
-
-          //add user photo
-          var photoFile = user.PhotoFile;
-          if (photoFile != null)
-          {
-            if (photoFile.Length > 0)
-            {
-              var uploadResult = new ImageUploadResult();
-              using (var stream = photoFile.OpenReadStream())
-              {
-                var uploadParams = new ImageUploadParams()
-                {
-                  File = new FileDescription(photoFile.Name, stream),
-                  Transformation = new Transformation().Width(500).Height(500).Crop("fill").Gravity("face")
-                };
-                var subdomain = GetAppSubDomain();
-                if (subdomain != "")
-                  uploadParams.Folder = subdomain + "/";
-                else
-                  uploadParams.Folder = "localDemo/";
-
-                uploadResult = _cloudinary.Upload(uploadParams);
-                if (uploadResult.StatusCode == HttpStatusCode.OK)
-                {
-                  Photo photo = new Photo();
-                  photo.Url = uploadResult.SecureUri.ToString();
-                  photo.PublicId = uploadResult.PublicId;
-                  photo.UserId = appUser.Id;
-                  photo.DateAdded = DateTime.Now;
-                  if (appUser.Photos.Any(u => u.IsMain))
-                  {
-                    var oldPhoto = await _context.Photos.FirstAsync(p => p.UserId == user.Id && p.IsMain == true);
-                    oldPhoto.IsMain = false;
-                    Update(oldPhoto);
-                  }
-                  photo.IsMain = true;
-                  photo.IsApproved = true;
-                  Add(photo);
-                }
-                else
-                {
-                  resultStatus = false;
-                }
-              }
-            }
-          }
-          else
-          {
-            resultStatus = true;
-          }
-
-          if (photoFile != null && await SaveAll())
-          {
-            var result = await _userManager.UpdateAsync(appUser);
-            if (result.Succeeded)
-            {
-              // fin de la transaction
-              identityContextTransaction.Commit();
-              await _cache.LoadUsers();
-              resultStatus = true;
-            }
-            else
-            {
-              identityContextTransaction.Rollback();
-              resultStatus = false;
-            }
-          }
-          else
-          {
-            var result = await _userManager.UpdateAsync(appUser);
-            if (result.Succeeded)
-            {
-              // fin de la transaction
-              identityContextTransaction.Commit();
-              await _cache.LoadUsers();
-              resultStatus = true;
-            }
-            else
-            {
-              identityContextTransaction.Rollback();
-              resultStatus = false;
-            }
-          }
-        }
-        catch
-        {
-          identityContextTransaction.Rollback();
-          return resultStatus = false;
-        }
-      }
-      return resultStatus;
-    }
-
-    public async Task<bool> AddEmployee(EmployeeForEditDto user)
-    {
-      List<User> employees = await _cache.GetEmployees();
-      List<UserRole> userRoles = await _cache.GetUserRoles();
-
-      // bool resultStatus = true;
-      using (var identityContextTransaction = _context.Database.BeginTransaction())
-      {
-        string publicId = "";
-        Boolean photoExists = false;
-        try
-        {
-          User appUser = new User();
-
-          var dateArray = user.strDateOfBirth.Split("/");
-          int year = Convert.ToInt32(dateArray[2]);
-          int month = Convert.ToInt32(dateArray[1]);
-          int day = Convert.ToInt32(dateArray[0]);
-          DateTime birthDay = new DateTime(year, month, day);
-
-          //is it a new user
-          if (user.Id == 0)
-          {
-            var userToSave = _mapper.Map<User>(user);
-            string strDoB = user.strDateOfBirth;
-            userToSave.DateOfBirth = birthDay;
-            var code = Guid.NewGuid();
-            userToSave.UserName = code.ToString();
-            userToSave.Validated = false;
-            userToSave.EmailConfirmed = false;
-
-            var result = await _userManager.CreateAsync(userToSave, password);
-            if (result.Succeeded)
-            {
-              appUser = await _userManager.Users.Include(i => i.Photos)
-                                                .FirstOrDefaultAsync(u => u.NormalizedUserName == userToSave.UserName.ToUpper());
-              appUser.IdNum = GetUserIDNumber(appUser.Id, appUser.LastName, appUser.FirstName);
-              await _userManager.UpdateAsync(appUser);
-            }
-          }
-          else
-          {
-            appUser = employees.First(u => u.Id == user.Id);
-            appUser.LastName = user.LastName;
-            appUser.FirstName = user.FirstName;
-            appUser.Gender = user.Gender;
-            appUser.DateOfBirth = birthDay;
-            appUser.PhoneNumber = user.PhoneNumber;
-            appUser.SecondPhoneNumber = user.SecondPhoneNumber;
-            appUser.Email = user.Email;
-            appUser.DistrictId = user.DistrictId;
-            Update(appUser);
-
-            //delete previous employee roles
-            List<UserRole> prevRoles = userRoles.Where(c => c.UserId == appUser.Id).ToList();
-            DeleteAll(prevRoles);
-          }
-
-          if (user.Roles != null)
-          {
-            List<string> rolesList = user.Roles.Split(",").ToList();
-            if (rolesList.Count() > 0)
-            {
-              List<Role> roles = await _context.Roles.ToListAsync();
-              IEnumerable<string> roleNames = roles.Where(r => rolesList.Contains(r.Name)).Select(r => r.Name);
-              var result = _userManager.AddToRolesAsync(appUser, roleNames);
-              if (!result.Result.Succeeded)
-              {
-                identityContextTransaction.Rollback();
-                return false;
-              }
-            }
-          }
-
-          //add user photo
-          var photoFile = user.PhotoFile;
-          if (photoFile != null)
-          {
-            if (photoFile.Length > 0)
-            {
-              photoExists = true;
-              var uploadResult = new ImageUploadResult();
-              using (var stream = photoFile.OpenReadStream())
-              {
-                var uploadParams = new ImageUploadParams()
-                {
-                  File = new FileDescription(photoFile.Name, stream),
-                  Transformation = new Transformation().Width(500).Height(500).Crop("fill").Gravity("face")
-                };
-
-                uploadResult = _cloudinary.Upload(uploadParams);
-                if (uploadResult.StatusCode == HttpStatusCode.OK)
-                {
-                  publicId = uploadResult.PublicId;
-
-                  Photo photo = new Photo();
-                  photo.UserId = appUser.Id;
-                  photo.Url = uploadResult.SecureUri.ToString();
-                  photo.PublicId = uploadResult.PublicId;
-                  photo.DateAdded = DateTime.Now;
-                  if (appUser.Photos.Any(u => u.IsMain))
-                  {
-                    var oldPhoto = await _context.Photos.FirstAsync(p => p.UserId == appUser.Id && p.IsMain == true);
-                    oldPhoto.IsMain = false;
-                    Update(oldPhoto);
-                  }
-                  photo.IsMain = true;
-                  photo.IsApproved = true;
-                  Add(photo);
-                }
-                // else
-                // {
-                //   identityContextTransaction.Rollback();
-                //   return false;
-                // }
-              }
-            }
-          }
-
-          // send the mail to update userName/pwd - add to Email table
-          if (appUser.Email != null)
-          {
-            ConfirmEmployeeEmailDto emailData = new ConfirmEmployeeEmailDto()
-            {
-              Id = appUser.Id,
-              LastName = appUser.LastName,
-              FirstName = appUser.FirstName,
-              Cell = appUser.PhoneNumber,
-              Gender = appUser.Gender,
-              Email = appUser.Email,
-              Token = await _userManager.GenerateEmailConfirmationTokenAsync(appUser)
-            };
-
-            List<EmailTemplate> emailTemplates = await _cache.GetEmailTemplates();
-            var template = emailTemplates.First(t => t.Id == employeeConfirmEmailId);
-            Email emailToSend = await SetDataForConfirmEmployeeEmail(emailData, template.Body, template.Subject);
-            Add(emailToSend);
-          }
-
-          await SaveAll();
-          identityContextTransaction.Commit();
-          return true;
-        }
-        catch (Exception ex)
-        {
-          var dd = ex.Message;
-          identityContextTransaction.Rollback();
-          if(photoExists)
-            DeletePhotoFromCloudinary(publicId);
-          return false;
-        }
-        finally
-        {
-          await _cache.LoadUsers();
-          await _cache.LoadUserRoles();
-          await _cache.LoadPhotos();
-        }
-      }
-    }
-
-    public async Task<Email> SetDataForConfirmEmployeeEmail(ConfirmEmployeeEmailDto emailData, string content, string subject)
-    {
-      List<Setting> settings = await _cache.GetSettings();
-
-      var tokens = await GetTokens();
-      var schoolName = settings.First(s => s.Name == "SchoolName").Value;
-      Email newEmail = new Email();
-      newEmail.EmailTypeId = 1;
-      newEmail.ToAddress = emailData.Email;
-      newEmail.FromAddress = "no-reply@educnotes.com";
-      newEmail.Subject = subject.Replace("<NOM_ECOLE>", schoolName);
-      List<TokenDto> tags = GetEmployeeEmailTokenValues(tokens, emailData);
-      newEmail.Body = ReplaceTokens(tags, content);
-      newEmail.InsertUserId = 1;
-      newEmail.InsertDate = DateTime.Now;
-      newEmail.UpdateUserId = 1;
-      newEmail.UpdateDate = DateTime.Now;
-      newEmail.ToUserId = emailData.Id;
-
-      return newEmail;
-    }
-
-    public async Task<EmailTemplate> GetEmailTemplate(int id)
-    {
-      List<EmailTemplate> templates = await _cache.GetEmailTemplates();
-      return templates.FirstOrDefault(s => s.Id == id);
-    }
-
-    public async Task<SmsTemplate> GetSmsTemplate(int id)
-    {
-      List<SmsTemplate> templates = await _context.SmsTemplates.ToListAsync();
-      return templates.FirstOrDefault(s => s.Id == id);
     }
 
     public async Task<Order> GetOrder(int id)
@@ -955,15 +342,6 @@ namespace SmokeEnGrill.API.Data
       order.Lines = lines.Where(o => o.OrderId == order.Id).ToList();
 
       return order;
-    }
-
-    public string GetUserIDNumber(int userId, string lastName, string firstName)
-    {
-      int randomVal = 300631;
-      int val = userId * 2 + randomVal;
-      // string idNum = lastName.Substring(0, 1).ToUpper() + firstName.Substring(0,1).ToUpper() + val.ToString().To5Digits();
-      string idNum = val.ToString().To5Digits();
-      return idNum;
     }
 
     public async Task<IEnumerable<PaymentType>> GetPaymentTypes()
@@ -1001,12 +379,6 @@ namespace SmokeEnGrill.API.Data
                                    .OrderBy(p => p.Name)
                                    .ToList();
       return products;
-    }
-
-    public async Task<IEnumerable<Setting>> GetSettings()
-    {
-      var settings = await _cache.GetSettings();
-      return settings;
     }
 
     public MsgRecipientsDto setRecipientsList(List<User> users, int msgChoice, Boolean sendToNotValidated)
@@ -1386,13 +758,6 @@ namespace SmokeEnGrill.API.Data
 
       var num = year + month + day + "-" + invoiceId.ToString();
       return num;
-    }
-
-    public async Task<User> GetUserByEmailAndLogin(string username, string email)
-    {
-      List<User> users = await _cache.GetUsers();
-      return users.FirstOrDefault(u => u.Email.ToUpper() == email.ToUpper() &&
-        u.UserName.ToUpper() == username.ToUpper());
     }
 
   }

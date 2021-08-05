@@ -10,7 +10,6 @@ using CloudinaryDotNet;
 using Account = CloudinaryDotNet.Account;
 using Microsoft.Extensions.Options;
 using SmokeEnGrill.API.Helpers;
-using SmokeEnGrill.API.Dtos;
 using System.IdentityModel.Tokens.Jwt;
 using System.Collections.Generic;
 using System.Security.Claims;
@@ -34,7 +33,9 @@ namespace SmokeEnGrill.API.Controllers
     private readonly IMapper _mapper;
     private readonly UserManager<User> _userManager;
     private readonly SignInManager<User> _signInManager;
-    private readonly ISmokeEnGrillRepository _repo;
+    private readonly IAuthRepository _repo;
+    private readonly IAdminRepository _adminRepo;
+    private readonly ICommRepository _commRepo;
     private DataContext _context;
     private readonly IOptions<CloudinarySettings> _cloudinaryConfig;
     private Cloudinary _cloudinary;
@@ -43,13 +44,15 @@ namespace SmokeEnGrill.API.Controllers
     int parentIsncrTypeId, schoolInscrTypeId, updateAccountEmailId, resetPwdEmailId;
     public ICacheRepository _cache { get; }
 
-    public AuthController(IConfiguration config, IMapper mapper, ISmokeEnGrillRepository repo,
-      UserManager<User> userManager, SignInManager<User> signInManager, DataContext context,
+    public AuthController(IConfiguration config, IMapper mapper, IAuthRepository repo, IAdminRepository adminRepo,
+      UserManager<User> userManager, SignInManager<User> signInManager, DataContext context, ICommRepository commRepo,
       IOptions<CloudinarySettings> cloudinaryConfig, ICacheRepository cache)
     {
       _cache = cache;
       _context = context;
       _repo = repo;
+      _adminRepo = adminRepo;
+      _commRepo = commRepo;
       _config = config;
       _mapper = mapper;
       _userManager = userManager;
@@ -78,50 +81,6 @@ namespace SmokeEnGrill.API.Controllers
       _cloudinary = new Cloudinary(acc);
     }
 
-    [HttpPost("{id}/setPassword/{password}")] // edition du mot de passe apres validation du code
-    public async Task<IActionResult> setPassword(int id, string password)
-    {
-      var user = await _repo.GetUser(id, false);
-      if (user != null)
-      {
-        bool emailCOnfirmed = user.EmailConfirmed;
-        var newPassword = _userManager.PasswordHasher.HashPassword(user, password);
-        user.PasswordHash = newPassword;
-        user.Validated = true;
-        user.EmailConfirmed = true;
-        if (!emailCOnfirmed)
-          user.ValidationDate = DateTime.Now;
-        var res = await _userManager.UpdateAsync(user);
-
-        if (res.Succeeded)
-        {
-          var mail = new EmailFormDto();
-          if (emailCOnfirmed)
-          {
-            // Envoi de mail pour la confirmation de la mise a jour du mot de passe
-            mail.subject = "mot de passe modifié";
-            mail.content = "bonjour <b> " + user.LastName + " " + user.FirstName + "</b>, votre nouveau mot de passe a bien eté enregistré...";
-            mail.toEmail = user.Email;
-          }
-          else
-          {
-            mail.subject = "Compte confirmé";
-            mail.content = "<b> " + user.LastName + " " + user.FirstName + "</b>, votre compte a bien été enregistré";
-            mail.toEmail = user.Email;
-          }
-          await _repo.SendEmail(mail);
-          var userToReturn = _mapper.Map<UserForListDto>(user);
-          return Ok(new
-          {
-            token = await GenerateJwtToken(user),
-            user = userToReturn
-          });
-        }
-        return BadRequest("impossible de terminé l'action");
-      }
-      return NotFound();
-    }
-
     [HttpPost("ForgotPassword")]
     public async Task<IActionResult> ForgotPassword(UserForResetPwdDto userData)
     {
@@ -136,7 +95,7 @@ namespace SmokeEnGrill.API.Controllers
           return BadRequest("compte pas encore activé....");
         // send 'token for password reset' email
         string resetToken = await _userManager.GeneratePasswordResetTokenAsync(user);
-        if (await _repo.SendResetPasswordLink(user, resetToken))
+        if (await _commRepo.SendResetPasswordLink(user, resetToken))
         {
           // envoi effectué
           user.ForgotPasswordCount += 1;
@@ -183,7 +142,7 @@ namespace SmokeEnGrill.API.Controllers
           var userToReturn = _mapper.Map<UserForListDto>(appUser);
 
           //get school settings
-          var settings = await _repo.GetSettings();
+          var settings = await _adminRepo.GetSettings();
 
           return Ok(new
           {
@@ -296,18 +255,6 @@ namespace SmokeEnGrill.API.Controllers
 
       }
       return BadRequest("Compte introuvable");
-    }
-
-    [HttpGet("GetAllCities")]
-    public async Task<IActionResult> GetAllCities()
-    {
-      return Ok(await _repo.GetAllCities());
-    }
-
-    [HttpGet("GetDistrictsByCityId/{id}")]
-    public async Task<IActionResult> GetAllGetDistrictsByCityIdCities(int id)
-    {
-      return Ok(await _repo.GetAllGetDistrictsByCityIdCities(id));
     }
 
     [HttpGet("{email}/VerifyEmail")]

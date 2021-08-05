@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 using AutoMapper;
+using EducNotes.API.data;
 using EducNotes.API.Dtos;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.UI.Services;
@@ -20,19 +22,51 @@ namespace SmokeEnGrill.API.Data
         private readonly IEmailSender _emailSender;
         private readonly IMapper _mapper;
         private readonly UserManager<User> _userManager;
+        private readonly ICacheRepository _cache;
         string password;
 
         public AuthRepository(DataContext context, IConfiguration config, IEmailSender emailSender,
-            UserManager<User> userManager, IMapper mapper)
+            UserManager<User> userManager, IMapper mapper, ICacheRepository cache)
         {
             _context = context;
             _config = config;
+            _cache = cache;
             _emailSender = emailSender;
             _mapper = mapper;
             _config = config;
             password = _config.GetValue<String>("AppSettings:defaultPassword");
             _userManager = userManager;
         }
+        public void Add<T>(T entity) where T : class
+        {
+            _context.Add(entity);
+        }
+
+        public async void AddAsync<T>(T entity) where T : class
+        {
+            await _context.AddAsync(entity);
+        }
+
+        public void Update<T>(T entity) where T : class
+        {
+            _context.Update(entity);
+        }
+
+        public void Delete<T>(T entity) where T : class
+        {
+            _context.Remove(entity);
+        }
+
+        public void DeleteAll<T>(List<T> entities) where T : class
+        {
+            _context.RemoveRange(entities);
+        }
+
+        public async Task<bool> SaveAll()
+        {
+            return await _context.SaveChangesAsync() > 0;
+        }
+
         public async Task<User> Login(string username, string password)
         {
             var user = await _context.Users.FirstOrDefaultAsync(x => x.UserName == username);
@@ -46,41 +80,35 @@ namespace SmokeEnGrill.API.Data
             return user;
         }
 
-        private bool VerifyPasswordHash(string password, byte[] passwordHash, byte[] passwordSalt)
+        public async Task<bool> UserNameExist(string userName, int currentUserId)
         {
-            using (var hmac = new System.Security.Cryptography.HMACSHA512(passwordSalt))
-            {
-                var computedHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-                for (int i = 0; i < computedHash.Length; i++)
-                {
-                    if (computedHash[i] != passwordHash[i]) return false;
-                }
-            }
+        List<User> users = await _cache.GetUsers();
+
+        var user = users.Where(u => u.Id != currentUserId)
+                        .FirstOrDefault(e => e.UserName.ToLower() == userName.ToLower());
+
+        if (user != null)
+        {
             return true;
         }
-
-        public async Task<User> Register(User user, string password)
-        {
-            byte[] passwordHash, passwordSalt;
-            CreatePasswordHash(password, out passwordHash, out passwordSalt);
-
-            // user.PasswordHash = passwordHash;
-            // user.PasswordSalt = passwordSalt;
-
-            await _context.Users.AddAsync(user);
-            await _context.SaveChangesAsync();
-
-            return user;
+        return false;
         }
 
-        private void CreatePasswordHash(string password, out byte[] passwordHash, out byte[] passwordSalt)
+        public async Task<User> GetUserByEmailAndLogin(string username, string email)
         {
-            using (var hmac = new System.Security.Cryptography.HMACSHA512())
-            {
-                passwordSalt = hmac.Key;
-                passwordHash = hmac.ComputeHash(System.Text.Encoding.UTF8.GetBytes(password));
-            }
+        List<User> users = await _cache.GetUsers();
+        return users.FirstOrDefault(u => u.Email.ToUpper() == email.ToUpper() &&
+            u.UserName.ToUpper() == username.ToUpper());
         }
+
+    public async Task<bool> EmailExist(string email)
+    {
+      var user = await _context.Users.FirstOrDefaultAsync(e => e.Email == email);
+      if (user != null)
+        return true;
+      return
+      false;
+    }
 
         public async Task<bool> UserExists(string username)
         {
@@ -93,24 +121,6 @@ namespace SmokeEnGrill.API.Data
         public async Task<User> GetUserById(int id)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Id == id);
-        }
-
-        public async Task<bool> SaveAll()
-        {
-            return await _context.SaveChangesAsync() > 0;
-        }
-
-        public async Task<bool> SendEmail(EmailFormDto emailFormDto)
-        {
-            try
-            {
-                await _emailSender.SendEmailAsync(emailFormDto.toEmail, emailFormDto.subject, emailFormDto.content);
-                return true;
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
         }
 
         public async Task<User> GetUser(int id, bool isCurrentUser)
@@ -130,27 +140,6 @@ namespace SmokeEnGrill.API.Data
         public async Task<User> GetUserByEmail(string email)
         {
             return await _context.Users.FirstOrDefaultAsync(u => u.Email.ToUpper() == email.ToUpper());
-        }
-
-        public async Task<bool> SendResetPasswordLink(string email, string code)
-        {
-            var emailform = new EmailFormDto
-            {
-                toEmail = email,
-                subject = "Réinitialisation de mot passe ",
-                //content ="Votre code de validation: "+ "<b>"+code.ToString()+"</b>"
-                content = ResetPasswordContent(code)
-            };
-            try
-            {
-                var res = await SendEmail(emailform);
-                return true;
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
-
         }
 
         public async Task<bool> UserNameExist(string userName)
